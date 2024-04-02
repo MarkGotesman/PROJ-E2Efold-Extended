@@ -30,7 +30,7 @@ data_type = config.data_type
 model_type = config.model_type
 pp_type = '{}_s{}'.format(config.pp_model, pp_steps)
 rho_per_position = config.rho_per_position
-e2e_model_path = '../models_ckpt/e2e_{}_{}_d{}_{}_{}_position_{}.pt'.format(model_type,
+e2e_model_path = '../.local/models_ckpt/e2e_{}_{}_d{}_{}_{}_position_{}.pt'.format(model_type,
     pp_type,d, data_type, pp_loss,rho_per_position)
 epoches_third = config.epoches_third
 evaluate_epi = config.evaluate_epi
@@ -73,7 +73,7 @@ rna_ss_e2e = RNA_SS_e2e(contact_net, lag_pp_net)
 
 if LOAD_MODEL and os.path.isfile(e2e_model_path):
     print('Loading e2e model...')
-    rna_ss_e2e.load_state_dict(torch.load(e2e_model_path))
+    rna_ss_e2e.load_state_dict(torch.load(map_location=device, f=e2e_model_path))
 
 
 # load test sequences

@@ -35,7 +35,7 @@ with open('e2e_pred_pseudoknot_tag.pickle', 'wb') as f:
 
 # get confusion matrix
 
-with open('../data/rnastralign_test_pseudoknot_tag.pickle', 'rb') as f:
+with open('../.local/data/rnastralign_test_pseudoknot_tag.pickle', 'rb') as f:
 	true_tag = pickle.load(f)
 
 pseudoknot_dict = dict()

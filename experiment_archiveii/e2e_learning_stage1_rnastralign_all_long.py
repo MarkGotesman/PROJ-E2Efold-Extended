@@ -29,7 +29,7 @@ LOAD_MODEL = config.LOAD_MODEL
 pp_steps = config.pp_steps
 data_type = config.data_type
 model_type = config.model_type
-model_path = '../models_ckpt/supervised_{}_{}_d{}_l3.pt'.format(model_type, data_type,d)
+model_path = '../.local/models_ckpt/supervised_{}_{}_d{}_l3.pt'.format(model_type, data_type,d)
 epoches_first = config.epoches_first
 evaluate_epi = config.evaluate_epi_stage_1
 
@@ -48,19 +48,19 @@ import collections
 RNA_SS_data = collections.namedtuple('RNA_SS_data', 
     'seq ss_label length name pairs')
 
-train_data = RNASSDataGenerator('../data/{}/'.format(data_type), 'train_600')
-val_data = RNASSDataGenerator('../data/{}/'.format(data_type), 'val_600')
+train_data = RNASSDataGenerator('../.local/data/{}/'.format(data_type), 'train_600')
+val_data = RNASSDataGenerator('../.local/data/{}/'.format(data_type), 'val_600')
 if data_type == 'archiveII_all':
-    test_data = RNASSDataGenerator('../data/{}/'.format(data_type), 'test_600')
+    test_data = RNASSDataGenerator('../.local/data/{}/'.format(data_type), 'test_600')
 if data_type == 'rnastralign_all':
-    test_data = RNASSDataGenerator('../data/{}/'.format(data_type), 'test_no_redundant_600')
+    test_data = RNASSDataGenerator('../.local/data/{}/'.format(data_type), 'test_no_redundant_600')
 
-train_data_1800 = RNASSDataGenerator('../data/{}/'.format(data_type), 'train_1800')
-val_data_1800 = RNASSDataGenerator('../data/{}/'.format(data_type), 'val_1800')
+train_data_1800 = RNASSDataGenerator('../.local/data/{}/'.format(data_type), 'train_1800')
+val_data_1800 = RNASSDataGenerator('../.local/data/{}/'.format(data_type), 'val_1800')
 if data_type == 'archiveII_all':
-    test_data_1800 = RNASSDataGenerator('../data/{}/'.format(data_type), 'test_1800')
+    test_data_1800 = RNASSDataGenerator('../.local/data/{}/'.format(data_type), 'test_1800')
 if data_type == 'rnastralign_all':
-    test_data_1800 = RNASSDataGenerator('../data/{}/'.format(data_type), 'test_no_redundant_1800')
+    test_data_1800 = RNASSDataGenerator('../.local/data/{}/'.format(data_type), 'test_no_redundant_1800')
 
 
 seq_len = train_data.data_y.shape[-2]
@@ -120,7 +120,7 @@ if model_type == 'conv2d_fc':
 
 if LOAD_MODEL and os.path.isfile(model_path):
     print('Loading u net model...')
-    contact_net.load_state_dict(torch.load(model_path))
+    contact_net.load_state_dict(torch.load(map_location=device, f=model_path))
 
 
 u_optimizer = optim.Adam(contact_net.parameters())
