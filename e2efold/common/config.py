@@ -20,8 +20,20 @@ def get_config_from_json(json_file):
 
 def process_config(jsonfile):
     config_dict = get_config_from_json(jsonfile)
+    config_dict = expand_shell_vars(config_dict)
     config = munch.Munch(config_dict)
     config.test = munch.Munch(config.test)
     return config
 
+
+# Function to recursively expand user path data (~) and env variables in a nested data structure such as a decoded dict from JSON
+def expand_shell_vars(obj):
+    if isinstance(obj, str):
+        return os.path.expandvars(os.path.expanduser(obj))
+    elif isinstance(obj, dict):
+        return {key: expand_shell_vars(value) for key, value in obj.items()}
+    elif isinstance(obj, list):
+        return [expand_shell_vars(item) for item in obj]
+    else:
+        return obj
 

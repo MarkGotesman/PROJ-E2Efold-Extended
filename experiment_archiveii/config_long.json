@@ -1,4 +1,5 @@
 {
+	"data_root": "~/.local/",
 	"exp_name": "try to fix the long sequence problem",
 	"gpu": "0",
 	"u_net_d": 10,

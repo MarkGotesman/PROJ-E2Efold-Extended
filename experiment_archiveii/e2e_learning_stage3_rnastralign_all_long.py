@@ -34,10 +34,10 @@ data_type = config.data_type
 model_type = config.model_type
 pp_type = '{}_s{}'.format(config.pp_model, pp_steps)
 rho_per_position = config.rho_per_position
-model_path = '../.local/models_ckpt/supervised_{}_{}_d{}_l3.pt'.format(model_type, data_type,d)
-pp_model_path = '../.local/models_ckpt/lag_pp_{}_{}_{}_position_{}.pt'.format(
+model_path = config.data_root+'models_ckpt/supervised_{}_{}_d{}_l3.pt'.format(model_type, data_type,d)
+pp_model_path = config.data_root+'models_ckpt/lag_pp_{}_{}_{}_position_{}.pt'.format(
     pp_type, data_type, pp_loss,rho_per_position)
-e2e_model_path = '../.local/models_ckpt/e2e_{}_{}_d{}_{}_{}_position_{}.pt'.format(model_type,
+e2e_model_path = config.data_root+'models_ckpt/e2e_{}_{}_d{}_{}_{}_position_{}.pt'.format(model_type,
     pp_type,d, data_type, pp_loss,rho_per_position)
 epoches_third = config.epoches_third
 evaluate_epi = config.evaluate_epi
@@ -61,13 +61,13 @@ import collections
 RNA_SS_data = collections.namedtuple('RNA_SS_data', 
     'seq ss_label length name pairs')
 
-train_data = RNASSDataGenerator('../.local/data/{}/'.format(config.test_data_type), 'train_600')
-val_data = RNASSDataGenerator('../.local/data/{}/'.format(config.test_data_type), 'val_600')
-test_data = RNASSDataGenerator('../.local/data/{}/'.format(config.test_data_type), 'all_600')
+train_data = RNASSDataGenerator(config.data_root+'data/{}/'.format(config.test_data_type), 'train_600')
+val_data = RNASSDataGenerator(config.data_root+'data/{}/'.format(config.test_data_type), 'val_600')
+test_data = RNASSDataGenerator(config.data_root+'data/{}/'.format(config.test_data_type), 'all_600')
 
-train_data_1800 = RNASSDataGenerator('../.local/data/{}/'.format(config.test_data_type), 'train_1800')
-val_data_1800 = RNASSDataGenerator('../.local/data/{}/'.format(config.test_data_type), 'val_1800')
-test_data_1800 = RNASSDataGenerator('../.local/data/{}/'.format(config.test_data_type), 'all_1800')
+train_data_1800 = RNASSDataGenerator(config.data_root+'data/{}/'.format(config.test_data_type), 'train_1800')
+val_data_1800 = RNASSDataGenerator(config.data_root+'data/{}/'.format(config.test_data_type), 'val_1800')
+test_data_1800 = RNASSDataGenerator(config.data_root+'data/{}/'.format(config.test_data_type), 'all_1800')
 
 
 seq_len = train_data.data_y.shape[-2]

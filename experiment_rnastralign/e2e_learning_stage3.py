@@ -30,13 +30,13 @@ data_type = config.data_type
 model_type = config.model_type
 pp_type = '{}_s{}'.format(config.pp_model, pp_steps)
 rho_per_position = config.rho_per_position
-model_path = '../.local/models_ckpt/supervised_{}_{}_d{}_l3_upsampling.pt'.format(model_type, data_type,d)
-pp_model_path = '../.local/models_ckpt/lag_pp_{}_{}_{}_position_{}.pt'.format(
+model_path = config.data_root+'models_ckpt/supervised_{}_{}_d{}_l3_upsampling.pt'.format(model_type, data_type,d)
+pp_model_path = config.data_root+'models_ckpt/lag_pp_{}_{}_{}_position_{}.pt'.format(
     pp_type, data_type, pp_loss,rho_per_position)
 # The unrolled steps for the upsampling model is 10
-# e2e_model_path = '../.local/models_ckpt/e2e_{}_{}_d{}_{}_{}_position_{}_upsampling.pt'.format(model_type,
+# e2e_model_path = config.data_root+'models_ckpt/e2e_{}_{}_d{}_{}_{}_position_{}_upsampling.pt'.format(model_type,
 #     pp_type,d, data_type, pp_loss,rho_per_position)
-e2e_model_path = '../.local/models_ckpt/e2e_{}_{}_d{}_{}_{}_position_{}.pt'.format(model_type,
+e2e_model_path = config.data_root+'models_ckpt/e2e_{}_{}_d{}_{}_{}_position_{}.pt'.format(model_type,
     pp_type,d, data_type, pp_loss,rho_per_position)
 epoches_third = config.epoches_third
 evaluate_epi = config.evaluate_epi
@@ -60,10 +60,10 @@ import collections
 RNA_SS_data = collections.namedtuple('RNA_SS_data', 
     'seq ss_label length name pairs')
 
-train_data = RNASSDataGenerator('../.local/data/{}/'.format(data_type), 'train', True)
-val_data = RNASSDataGenerator('../.local/data/{}/'.format(data_type), 'val')
-# test_data = RNASSDataGenerator('../.local/data/{}/'.format(data_type), 'test_no_redundant')
-test_data = RNASSDataGenerator('../.local/data/rnastralign_all/', 'test_no_redundant_600')
+train_data = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'train', True)
+val_data = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'val')
+# test_data = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'test_no_redundant')
+test_data = RNASSDataGenerator(config.data_root+'data/rnastralign_all/', 'test_no_redundant_600')
 
 
 seq_len = train_data.data_y.shape[-2]
@@ -287,10 +287,3 @@ if not args.test:
 
 
 all_test_only_e2e(test_generator, contact_net, lag_pp_net, device, test_data)
-
-
-
-
-
-
-

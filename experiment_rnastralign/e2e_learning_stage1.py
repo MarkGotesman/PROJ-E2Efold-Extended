@@ -18,8 +18,6 @@ config = process_config(config_file)
 print("#####Stage 1#####")
 print('Here is the configuration of this run: ')
 print(config)
-
-
 os.environ["CUDA_VISIBLE_DEVICES"]= config.gpu
 
 d = config.u_net_d
@@ -29,7 +27,7 @@ LOAD_MODEL = config.LOAD_MODEL
 pp_steps = config.pp_steps
 data_type = config.data_type
 model_type = config.model_type
-model_path = '../.local/models_ckpt/supervised_{}_{}_d{}_l3_upsampling.pt'.format(model_type, data_type,d)
+model_path = config.data_root+'models_ckpt/supervised_{}_{}_d{}_l3_upsampling.pt'.format(model_type, data_type,d)
 epoches_first = config.epoches_first
 evaluate_epi = config.evaluate_epi_stage_1
 
@@ -48,10 +46,10 @@ import collections
 RNA_SS_data = collections.namedtuple('RNA_SS_data', 
     'seq ss_label length name pairs')
 
-train_data = RNASSDataGenerator('../.local/data/{}/'.format(data_type), 'train', True)
-val_data = RNASSDataGenerator('../.local/data/{}/'.format(data_type), 'val')
-# test_data = RNASSDataGenerator('../.local/data/{}/'.format(data_type), 'test_no_redundant')
-test_data = RNASSDataGenerator('../.local/data/rnastralign_all/', 'test_no_redundant_600')
+train_data = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'train', True)
+val_data = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'val')
+# test_data = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'test_no_redundant')
+test_data = RNASSDataGenerator(config.data_root+'data/rnastralign_all/', 'test_no_redundant_600')
 
 seq_len = train_data.data_y.shape[-2]
 print('Max seq length ', seq_len)

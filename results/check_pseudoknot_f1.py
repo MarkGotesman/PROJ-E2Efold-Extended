@@ -14,7 +14,7 @@ pseudoknot_f1 = list(map(lambda x: float(x.split('_')[0]), pred_list))
 print('Exact f1: ', np.average(pseudoknot_f1))
 
 # for rnastructure
-with open('../.local/data/rnastralign_test_pseudoknot_tag.pickle', 'rb') as f:
+with open(config.data_root+'data/rnastralign_test_pseudoknot_tag.pickle', 'rb') as f:
 	pseudoknot_tag = pickle.load(f)
 # load rna structure data
 filepath = './traditional_method_results/rnastralign/results_no_shift/RNAStructure.tsv'

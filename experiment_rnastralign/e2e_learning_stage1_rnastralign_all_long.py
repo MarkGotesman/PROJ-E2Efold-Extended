@@ -1,6 +1,17 @@
-import os
+import torch.optim as optim
+from torch.utils import data
+
+from e2efold.models import ContactNetwork, ContactNetwork_test, ContactNetwork_fc
+from e2efold.models import ContactAttention, ContactAttention_simple_fix_PE
+from e2efold.models import ContactAttention_simple
+from e2efold.common.utils import *
 from e2efold.common.config import process_config
+from e2efold.postprocess import postprocess
+
+from e2efold.common.long_seq_pre_post_process import *
+import os
 from e2efold.common.utils import get_args
+
 args = get_args()
 
 config_file = args.config
@@ -11,17 +22,6 @@ print('Here is the configuration of this run: ')
 print(config)
 os.environ["CUDA_VISIBLE_DEVICES"]= config.gpu
 
-import torch.optim as optim
-from torch.utils import data
-
-from e2efold.models import ContactNetwork, ContactNetwork_test, ContactNetwork_fc
-from e2efold.models import ContactAttention, ContactAttention_simple_fix_PE
-from e2efold.models import ContactAttention_simple
-from e2efold.common.utils import *
-from e2efold.common.long_seq_pre_post_process import *
-from e2efold.postprocess import postprocess
-
-
 d = config.u_net_d
 BATCH_SIZE = config.batch_size_stage_1
 OUT_STEP = config.OUT_STEP
@@ -29,7 +29,7 @@ LOAD_MODEL = config.LOAD_MODEL
 pp_steps = config.pp_steps
 data_type = config.data_type
 model_type = config.model_type
-model_path = '../.local/models_ckpt/supervised_{}_{}_d{}_l3.pt'.format(model_type, data_type,d)
+model_path = config.data_root+'models_ckpt/supervised_{}_{}_d{}_l3.pt'.format(model_type, data_type,d)
 epoches_first = config.epoches_first
 evaluate_epi = config.evaluate_epi_stage_1
 
@@ -48,19 +48,19 @@ import collections
 RNA_SS_data = collections.namedtuple('RNA_SS_data', 
     'seq ss_label length name pairs')
 
-train_data = RNASSDataGenerator('../.local/data/{}/'.format(data_type), 'train_600')
-val_data = RNASSDataGenerator('../.local/data/{}/'.format(data_type), 'val_600')
+train_data = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'train_600')
+val_data = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'val_600')
 if data_type == 'archiveII_all':
-    test_data = RNASSDataGenerator('../.local/data/{}/'.format(data_type), 'test_600')
+    test_data = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'test_600')
 if data_type == 'rnastralign_all':
-    test_data = RNASSDataGenerator('../.local/data/{}/'.format(data_type), 'test_no_redundant_600')
+    test_data = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'test_no_redundant_600')
 
-train_data_1800 = RNASSDataGenerator('../.local/data/{}/'.format(data_type), 'train_1800')
-val_data_1800 = RNASSDataGenerator('../.local/data/{}/'.format(data_type), 'val_1800')
+train_data_1800 = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'train_1800')
+val_data_1800 = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'val_1800')
 if data_type == 'archiveII_all':
-    test_data_1800 = RNASSDataGenerator('../.local/data/{}/'.format(data_type), 'test_1800')
+    test_data_1800 = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'test_1800')
 if data_type == 'rnastralign_all':
-    test_data_1800 = RNASSDataGenerator('../.local/data/{}/'.format(data_type), 'test_no_redundant_1800')
+    test_data_1800 = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'test_no_redundant_1800')
 
 
 seq_len = train_data.data_y.shape[-2]
