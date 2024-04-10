@@ -41,8 +41,7 @@ k = config.k
 
 steps_done = 0
 # if gpu is to be used
-# device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-device = torch.device("cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # seed everything for reproduction
 seed_torch(0)
 
