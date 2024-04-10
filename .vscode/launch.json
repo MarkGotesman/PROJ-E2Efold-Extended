@@ -1,0 +1,26 @@
+{
+	// Use IntelliSense to learn about possible attributes.
+	// Hover to view descriptions of existing attributes.
+	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+	"version": "0.2.0",
+	"configurations": [
+		{
+			"name": "RNAStralign: Short",
+			"type": "debugpy",
+			"request": "launch",
+			"program": "'${workspaceFolder}'/experiment_rnastralign/e2e_learning_stage3.py",
+			"console": "integratedTerminal",
+			"cwd": "${workspaceFolder}/experiment_rnastralign",
+			"args": "-c config.json --test True"
+		},
+		{
+			"name": "ArchiveII: Short",
+			"type": "debugpy",
+			"request": "launch",
+			"program": "'${workspaceFolder}'/experiment_archiveii/e2e_learning_stage3.py",
+			"console": "integratedTerminal",
+			"cwd": "${workspaceFolder}/experiment_archiveii",
+			"args": "-c config.json --test True"
+		}
+	]
+}
