@@ -46,6 +46,7 @@ epoches_third = config.epoches_third
 evaluate_epi = config.evaluate_epi
 step_gamma = config.step_gamma
 k = config.k
+cond_save_ct_predictions = config.save_ct_predictions
 
 
 # if gpu is to be used

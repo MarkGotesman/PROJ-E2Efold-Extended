@@ -131,7 +131,7 @@ def model_eval_all_test(test_generator, contact_net, lag_pp_net, device):
     # with open('../results/rnastralign_short_e2e_evaluation_dict.pickle', 'wb') as f:
     #     pickle.dump(result_dict, f)
 
-def all_test_only_e2e(test_generator, contact_net, lag_pp_net, device, test_data, nameof_output_prefix="N.A.", listof_type_filters=None, cond_save_ct_prediction=False):
+def all_test_only_e2e(test_generator, contact_net, lag_pp_net, device, test_data, nameof_output_prefix="N.A.", cond_save_ct_predictions=False, listof_type_filters=None):
     # Sets the module(s) in evaluation mode.
     contact_net.eval()
     lag_pp_net.eval()
@@ -184,7 +184,7 @@ def all_test_only_e2e(test_generator, contact_net, lag_pp_net, device, test_data
         # f1_pp += f1_tmp
         seq_lens_list += list(seq_lens)
         
-        if (cond_save_ct_prediction):
+        if (cond_save_ct_predictions):
             dictof_current_conectivity_tables = dict()
             
             current_name    = test_data.data[countof_batches_elapsed].name
@@ -199,7 +199,6 @@ def all_test_only_e2e(test_generator, contact_net, lag_pp_net, device, test_data
             
             dictof_result_conectivity_tables[current_name] = dictof_current_conectivity_tables
 
-    print (dictof_result_conectivity_tables) #TODO: remove
     # p=precision, r=recall, f1=f1_score:
     pp_exact_p,pp_exact_r,pp_exact_f1 = zip(*result_pp)
     pp_shift_p,pp_shift_r,pp_shift_f1 = zip(*result_pp_shift)
@@ -248,10 +247,9 @@ def all_test_only_e2e(test_generator, contact_net, lag_pp_net, device, test_data
     # with open('../results/archiveii_short_e2e_evaluation_dict.pickle', 'wb') as f:
     #     pickle.dump(result_dict, f)
     
-    if cond_save_ct_prediction:    
+    if cond_save_ct_predictions:    
         with open(f'../results/{nameof_output_prefix}_prediction_dict.pickle', 'wb') as f:
             pickle.dump(dictof_result_conectivity_tables, f)
-
 
 def concat_nameof_output(nameof_output_prefix, nameof_output_body, nameof_output_folder='../results/', charof_output_delim='-', strof_output_suffix='.csv', cond_append_datetime=True):
     listof_output = [nameof_output_prefix, nameof_output_body]

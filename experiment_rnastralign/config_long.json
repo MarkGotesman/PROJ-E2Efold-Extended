@@ -21,6 +21,7 @@
 	"evaluate_epi_stage_1": 5,
 	"step_gamma": 1,
 	"k": 1,
+	"save_ct_predictions": false,
 	"test": {
 		"f1": true,
 		"accuracy": false,
