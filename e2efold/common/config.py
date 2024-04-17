@@ -22,7 +22,8 @@ def process_config(jsonfile):
     config_dict = get_config_from_json(jsonfile)
     config_dict = expand_shell_vars(config_dict)
     config = munch.Munch(config_dict)
-    config.test = munch.Munch(config.test)
+    if ('test' in config):
+        config.test = munch.Munch(config.test)
     return config
 
 
