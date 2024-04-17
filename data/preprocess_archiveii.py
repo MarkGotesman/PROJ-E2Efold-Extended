@@ -1,4 +1,6 @@
 import _pickle as cPickle
+from e2efold.common.config import process_config
+config = process_config('./data_config.json')
 import numpy as np
 import os
 import pandas as pd
@@ -9,7 +11,7 @@ from e2efold.common.utils import get_pairings
 dataset = 'archiveII'
 rna_type = ['5s', '16s', '23s', 'grp1', 'grp2', 'RNaseP', 
     'srp', 'telomerase', 'tmRNA', 'tRNA']
-datapath = './archiveII'
+datapath = config.data_root+'archiveII'
 seed = 0
 
 # for rna_type in rna_types:

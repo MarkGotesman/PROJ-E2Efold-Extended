@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import _pickle as cPickle
+from e2efold.common.config import process_config
+config = process_config('./data_config.json')
 import numpy as np
 import os
 import pandas as pd
@@ -10,7 +12,7 @@ from multiprocessing import Pool
 
 dataset = 'archiveII'
 rna_type = '5s'
-datapath = './archiveII'
+datapath = config.data_root+'archiveII'
 seed = 0
 
 # select all the 5s files

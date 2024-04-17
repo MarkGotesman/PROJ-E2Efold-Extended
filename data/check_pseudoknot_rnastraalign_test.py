@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import _pickle as cPickle
+from e2efold.common.config import process_config
+config = process_config('./data_config.json')
 import numpy as np
 import os
 import pandas as pd
@@ -8,7 +10,7 @@ from multiprocessing import Pool
 
 
 dataset = 'RNAStrAlign'
-file_list_path = './rnastralign_test_600.list'
+file_list_path = config.data_root+'rnastralign_test_600.list'
 with open(file_list_path, 'r') as f:
     text = f.read()
     file_list = text.splitlines()

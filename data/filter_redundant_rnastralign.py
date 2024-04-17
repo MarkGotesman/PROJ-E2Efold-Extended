@@ -1,4 +1,6 @@
 import _pickle as cPickle
+from e2efold.common.config import process_config
+config = process_config('./data_config.json')
 import numpy as np
 import os
 from os import walk
@@ -14,7 +16,7 @@ rna_types = ['tmRNA', 'tRNA', 'telomerase', 'RNaseP',
     'SRP', '16S_rRNA', '5S_rRNA', 'group_I_intron']
 
 # rna_types = ['5S_rRNA', '16S_rRNA']
-datapath = './RNAStrAlign'
+datapath = config.data_root+'RNAStrAlign'
 seed = 0
 
 # select all files within the preferred rna_type
