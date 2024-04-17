@@ -14,6 +14,15 @@
 			"args": "-c config.json --test True"
 		},
 		{
+			"name": "RNAStralign: Long",
+			"type": "debugpy",
+			"request": "launch",
+			"program": "'${workspaceFolder}'/experiment_rnastralign/e2e_learning_stage3_rnastralign_all_long.py",
+			"console": "integratedTerminal",
+			"cwd": "${workspaceFolder}/experiment_rnastralign",
+			"args": "-c config_long.json --test True"
+		},
+		{
 			"name": "ArchiveII: Short",
 			"type": "debugpy",
 			"request": "launch",
@@ -21,6 +30,22 @@
 			"console": "integratedTerminal",
 			"cwd": "${workspaceFolder}/experiment_archiveii",
 			"args": "-c config.json --test True"
+		},
+		{
+			"name": "ArchiveII: Long",
+			"type": "debugpy",
+			"request": "launch",
+			"program": "'${workspaceFolder}'/experiment_archiveii/e2e_learning_stage3_rnastralign_all_long.py",
+			"console": "integratedTerminal",
+			"cwd": "${workspaceFolder}/experiment_archiveii",
+			"args": "-c config_long.json --test True"
+		},
+		{
+			"name": "Current File with CWD",
+			"type": "debugpy",
+			"request": "launch",
+			"cwd": "${fileDirname}",
+			"program": "${file}"
 		}
 	]
 }
