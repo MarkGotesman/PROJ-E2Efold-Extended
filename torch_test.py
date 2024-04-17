@@ -36,7 +36,7 @@ def train_model(device):
 
     # Train the model
     start_time = time.time()
-    epochs = 5000
+    epochs = 500
     print(f'Epochs: {epochs}')
     for epoch in range(epochs):
         # Forward pass
@@ -49,8 +49,8 @@ def train_model(device):
         optimizer.step()
 
         # Print progress
-        # if (epoch+1) % 10 == 0:
-        #     print(f'Epoch [{epoch+1}/1000], Loss: {loss.item():.4f}')
+        if (epoch+1) % 10 == 0:
+            print(f'Epoch [{epoch+1}/{epochs}], Loss: {loss.item():.4f}')
 
     end_time = time.time()
     print(f"Training time on {device}: {end_time - start_time} seconds")
