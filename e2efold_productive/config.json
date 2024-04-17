@@ -1,6 +1,6 @@
 {
 	"data_root": "~/.local/",
-	"exp_name": "performance on short sequences (50-600)",
+	"exp_name": "PROD-Short",
 	"test_folder": "short_seqs",
 	"save_folder": "short_cts",
 	"gpu": "0",

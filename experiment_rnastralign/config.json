@@ -1,6 +1,6 @@
 {
 	"data_root": "~/.local/",
-	"exp_name": "performance on short sequences",
+	"exp_name": "EXPER-RNAStrAlign-Short",
 	"gpu": "0",
 	"u_net_d": 10,
 	"BATCH_SIZE": 8,

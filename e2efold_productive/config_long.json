@@ -1,5 +1,6 @@
 {
-    "exp_name": "on the long sequences (600~1800)",
+    "data_root": "~/.local/",
+    "exp_name": "PROD-Long",
     "test_folder": "long_seqs",
     "save_folder": "long_cts",
     "gpu": "0",
