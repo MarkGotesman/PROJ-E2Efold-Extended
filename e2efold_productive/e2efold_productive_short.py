@@ -1,3 +1,4 @@
+
 import torch.optim as optim
 from torch.utils import data
 
@@ -16,11 +17,12 @@ config_file = args.config
 config = process_config(config_file)
 print("#####Stage 3#####")
 print('Here is the configuration of this run: ')
-print(config)
+print(pretty_obj(config))
 
 os.environ["CUDA_VISIBLE_DEVICES"]= config.gpu
 
 d = config.u_net_d
+nameof_exper = config.exp_name
 BATCH_SIZE = config.BATCH_SIZE
 OUT_STEP = config.OUT_STEP
 LOAD_MODEL = config.LOAD_MODEL

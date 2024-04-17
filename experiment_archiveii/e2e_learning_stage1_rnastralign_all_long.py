@@ -1,3 +1,4 @@
+
 import os
 from e2efold.common.config import process_config
 from e2efold.common.utils import get_args
@@ -8,7 +9,7 @@ config_file = args.config
 config = process_config(config_file)
 print("#####Stage 1#####")
 print('Here is the configuration of this run: ')
-print(config)
+print(pretty_obj(config))
 os.environ["CUDA_VISIBLE_DEVICES"]= config.gpu
 
 import torch.optim as optim
@@ -23,6 +24,7 @@ from e2efold.postprocess import postprocess
 
 
 d = config.u_net_d
+nameof_exper = config.exp_name
 BATCH_SIZE = config.batch_size_stage_1
 OUT_STEP = config.OUT_STEP
 LOAD_MODEL = config.LOAD_MODEL
@@ -41,7 +43,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 seed_torch()
 
 # for loading data
-# loading the rna ss data, the data has been preprocessed
+# loading the RNA secondary structure (SS) data, the data has been preprocessed
 # 5s data is just a demo data, which do not have pseudoknot, will generate another data having that
 from e2efold.data_generator import RNASSDataGenerator, Dataset, Dataset_1800
 import collections

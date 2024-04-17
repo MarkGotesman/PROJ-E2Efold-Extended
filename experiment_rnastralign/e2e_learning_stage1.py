@@ -1,3 +1,4 @@
+
 import _pickle as pickle
 
 import torch.optim as optim
@@ -17,10 +18,11 @@ config_file = args.config
 config = process_config(config_file)
 print("#####Stage 1#####")
 print('Here is the configuration of this run: ')
-print(config)
+print(pretty_obj(config))
 os.environ["CUDA_VISIBLE_DEVICES"]= config.gpu
 
 d = config.u_net_d
+nameof_exper = config.exp_name
 BATCH_SIZE = config.batch_size_stage_1
 OUT_STEP = config.OUT_STEP
 LOAD_MODEL = config.LOAD_MODEL
@@ -39,7 +41,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 seed_torch()
 
 # for loading data
-# loading the rna ss data, the data has been preprocessed
+# loading the RNA secondary structure (SS) data, the data has been preprocessed
 # 5s data is just a demo data, which do not have pseudoknot, will generate another data having that
 from e2efold.data_generator import RNASSDataGenerator, Dataset
 import collections
