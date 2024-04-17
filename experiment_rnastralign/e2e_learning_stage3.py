@@ -16,102 +16,77 @@ config_file = args.config
 config = process_config(config_file)
 print("#####Stage 3#####")
 print('Here is the configuration of this run: ')
-print(config)
+print(pretty_obj(config))
 
 os.environ["CUDA_VISIBLE_DEVICES"]= config.gpu
 
-d = config.u_net_d
-BATCH_SIZE = config.BATCH_SIZE
-OUT_STEP = config.OUT_STEP
-LOAD_MODEL = config.LOAD_MODEL
-pp_steps = config.pp_steps
-pp_loss = config.pp_loss
-data_type = config.data_type
-model_type = config.model_type
-pp_type = '{}_s{}'.format(config.pp_model, pp_steps)
+d                = config.u_net_d
+nameof_exper = config.exp_name
+BATCH_SIZE       = config.BATCH_SIZE
+OUT_STEP         = config.OUT_STEP
+LOAD_MODEL       = config.LOAD_MODEL    
+pp_steps         = config.pp_steps
+pp_loss          = config.pp_loss
+data_type        = config.data_type
+model_type       = config.model_type
+pp_type          = '{}_s{}'.format(config.pp_model, pp_steps)
 rho_per_position = config.rho_per_position
-model_path = config.data_root+'models_ckpt/supervised_{}_{}_d{}_l3_upsampling.pt'.format(model_type, data_type,d)
-pp_model_path = config.data_root+'models_ckpt/lag_pp_{}_{}_{}_position_{}.pt'.format(
-    pp_type, data_type, pp_loss,rho_per_position)
-# The unrolled steps for the upsampling model is 10
-# e2e_model_path = config.data_root+'models_ckpt/e2e_{}_{}_d{}_{}_{}_position_{}_upsampling.pt'.format(model_type,
-#     pp_type,d, data_type, pp_loss,rho_per_position)
-e2e_model_path = config.data_root+'models_ckpt/e2e_{}_{}_d{}_{}_{}_position_{}.pt'.format(model_type,
-    pp_type,d, data_type, pp_loss,rho_per_position)
-epoches_third = config.epoches_third
-evaluate_epi = config.evaluate_epi
-step_gamma = config.step_gamma
-k = config.k
-
+model_path       = config.data_root+'models_ckpt/supervised_{}_{}_d{}_l3_upsampling.pt'.format(model_type, data_type,d)
+pp_model_path    = config.data_root+'models_ckpt/lag_pp_{}_{}_{}_position_{}.pt'.format(pp_type, data_type, pp_loss,rho_per_position)
+e2e_model_path   = config.data_root+'models_ckpt/e2e_{}_{}_d{}_{}_{}_position_{}.pt'.format(model_type, pp_type,d, data_type, pp_loss,rho_per_position)
+epoches_third    = config.epoches_third
+evaluate_epi     = config.evaluate_epi
+step_gamma       = config.step_gamma
+k                = config.k
 
 steps_done = 0
-# if gpu is to be used
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # if gpu is to be used
 
 # seed everything for reproduction
 seed_torch(0)
 
-
 # for loading data
-# loading the rna ss data, the data has been preprocessed
-# 5s data is just a demo data, which do not have pseudoknot, will generate another data having that
+# loading the RNA secondary structure (SS) data, the data has been preprocessed
 from e2efold.data_generator import RNASSDataGenerator, Dataset
 import collections
-RNA_SS_data = collections.namedtuple('RNA_SS_data', 
-    'seq ss_label length name pairs')
+RNA_SS_data = collections.namedtuple('RNA_SS_data', 'seq ss_label length name pairs')
 
-train_data = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'train', True)
-val_data = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'val')
-# test_data = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'test_no_redundant')
-test_data = RNASSDataGenerator(config.data_root+'data/rnastralign_all/', 'test_no_redundant_600')
-
+train_data  = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'train', True)
+val_data    = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'val')
+test_data   = RNASSDataGenerator(config.data_root+'data/rnastralign_all/', 'test_no_redundant_600')
 
 seq_len = train_data.data_y.shape[-2]
 print('Max seq length ', seq_len)
 
-# using the pytorch interface to parallel the data generation and model training
-params = {'batch_size': BATCH_SIZE,
-          'shuffle': True,
-          'num_workers': 6,
-          'drop_last': True}
+# Using Pytorch DataLoader API.
+params = {'batch_size': BATCH_SIZE, 'shuffle': True, 'num_workers': 6, 'drop_last': True}
 train_set = Dataset(train_data)
 train_generator = data.DataLoader(train_set, **params)
 
 val_set = Dataset(val_data)
 val_generator = data.DataLoader(val_set, **params)
 
-# only for save the final results
-params = {'batch_size': 1,
-          'shuffle': False,
-          'num_workers': 6,
-          'drop_last': False}
+# Used to save the final results.
+params = {'batch_size': 1, 'shuffle': False, 'num_workers': 6, 'drop_last': False}
 test_set = Dataset(test_data)
 test_generator = data.DataLoader(test_set, **params)
 
+# These conditionals check the type of model for which a data path (on disk) to the model checkpoint data was provided
+# so that the model checkpoint data can be imported via contact_net.load_state_dict(...) 
+# to the respective in-memory Pytorch model that it was trained on and exported from.
+# U-Net (utility/unconstrained score network; alternatively called contact network outputing a contact score map)
+if (model_type == 'test_lc'):        contact_net = ContactNetwork_test(d=d, L=seq_len).to(device)
+if (model_type == 'att6'):           contact_net = ContactAttention(d=d, L=seq_len).to(device)
+if (model_type == 'att_simple'):     contact_net = ContactAttention_simple(d=d, L=seq_len).to(device)    
+if (model_type == 'att_simple_fix'): contact_net = ContactAttention_simple_fix_PE(d=d, L=seq_len, device=device).to(device)
+if (model_type == 'fc'):             contact_net = ContactNetwork_fc(d=d, L=seq_len).to(device)
+if (model_type == 'conv2d_fc'):      contact_net = ContactNetwork(d=d, L=seq_len).to(device)
 
-if model_type =='test_lc':
-    contact_net = ContactNetwork_test(d=d, L=seq_len).to(device)
-if model_type == 'att6':
-    contact_net = ContactAttention(d=d, L=seq_len).to(device)
-if model_type == 'att_simple':
-    contact_net = ContactAttention_simple(d=d, L=seq_len).to(device)    
-if model_type == 'att_simple_fix':
-    contact_net = ContactAttention_simple_fix_PE(d=d, L=seq_len, 
-        device=device).to(device)
-if model_type == 'fc':
-    contact_net = ContactNetwork_fc(d=d, L=seq_len).to(device)
-if model_type == 'conv2d_fc':
-    contact_net = ContactNetwork(d=d, L=seq_len).to(device)
-
-# need to write the class for the computational graph of lang pp
-if pp_type=='nn':
-    lag_pp_net = Lag_PP_NN(pp_steps, k).to(device)
-if 'zero' in pp_type:
-    lag_pp_net = Lag_PP_zero(pp_steps, k).to(device)
-if 'perturb' in pp_type:
-    lag_pp_net = Lag_PP_perturb(pp_steps, k).to(device)
-if 'mixed'in pp_type:
-    lag_pp_net = Lag_PP_mixed(pp_steps, k, rho_per_position).to(device)
+# PP-Net (note: Lag -> Lagrangian)
+if ('nn'      in pp_type): lag_pp_net = Lag_PP_NN(pp_steps, k).to(device)
+if ('zero'    in pp_type): lag_pp_net = Lag_PP_zero(pp_steps, k).to(device)
+if ('perturb' in pp_type): lag_pp_net = Lag_PP_perturb(pp_steps, k).to(device)
+if ('mixed'   in pp_type): lag_pp_net = Lag_PP_mixed(pp_steps, k, rho_per_position).to(device)
 
 if LOAD_MODEL and os.path.isfile(model_path):
     print('Loading u net model...')
@@ -120,24 +95,19 @@ if LOAD_MODEL and os.path.isfile(pp_model_path):
     print('Loading pp model...')
     lag_pp_net.load_state_dict(torch.load(map_location=device, f=pp_model_path))
 
-
+# End-to-end model
 rna_ss_e2e = RNA_SS_e2e(contact_net, lag_pp_net)
 
 if LOAD_MODEL and os.path.isfile(e2e_model_path):
     print('Loading e2e model...')
     rna_ss_e2e.load_state_dict(torch.load(map_location=device, f=e2e_model_path))
 
-        
 all_optimizer = optim.Adam(rna_ss_e2e.parameters())
 
-# for 5s
-# pos_weight = torch.Tensor([100]).to(device)
-# for length as 600
-pos_weight = torch.Tensor([300]).to(device)
-criterion_bce_weighted = torch.nn.BCEWithLogitsLoss(
-    pos_weight = pos_weight)
+# "Since, in the contact map, most entries are 0, we used weighted loss and set the positive sample weight as 300"
+pos_weight = torch.Tensor([300]).to(device) 
+criterion_bce_weighted = torch.nn.BCEWithLogitsLoss(pos_weight = pos_weight)
 criterion_mse = torch.nn.MSELoss(reduction='sum')
-
 
 def per_family_evaluation():
     contact_net.eval()
@@ -165,8 +135,7 @@ def per_family_evaluation():
 
         PE_batch = get_pe(seq_lens, contacts.shape[-1]).float().to(device)
         with torch.no_grad():
-            pred_contacts = contact_net(PE_batch, 
-                seq_embedding_batch, state_pad)
+            pred_contacts = contact_net(PE_batch, seq_embedding_batch, state_pad)
             a_pred_list = lag_pp_net(pred_contacts, seq_embedding_batch)
 
         # the learning pp result
@@ -285,5 +254,4 @@ if not args.test:
             torch.save(rna_ss_e2e.state_dict(), e2e_model_path)
             per_family_evaluation()
 
-
-all_test_only_e2e(test_generator, contact_net, lag_pp_net, device, test_data)
+all_test_only_e2e(test_generator, contact_net, lag_pp_net, device, test_data, nameof_exper)

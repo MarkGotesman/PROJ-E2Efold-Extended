@@ -1,7 +1,16 @@
-import os
-import _pickle as pickle
+
+import pickle
+from torch.utils import data
+
+from e2efold.common.long_seq_pre_post_process import combine_chunk_u_maps_no_replace
+from e2efold.models import ContactNetwork, ContactNetwork_test, ContactNetwork_fc
+from e2efold.models import ContactAttention, ContactAttention_simple_fix_PE
+from e2efold.models import Lag_PP_NN, RNA_SS_e2e, Lag_PP_zero, Lag_PP_perturb, Lag_PP_final
+from e2efold.models import Lag_PP_mixed, ContactAttention_simple
+from e2efold.common.utils import *
 from e2efold.common.config import process_config
-from e2efold.common.utils import get_args
+from e2efold.evaluation import all_test_only_e2e
+from e2efold.postprocess import postprocess
 
 args = get_args()
 
@@ -10,21 +19,12 @@ config_file = args.config
 config = process_config(config_file)
 print("#####Stage 3#####")
 print('Here is the configuration of this run: ')
-print(config)
+print(pretty_obj(config))
 
 os.environ["CUDA_VISIBLE_DEVICES"]= config.gpu
 
-from torch.utils import data
-
-from e2efold.models import ContactNetwork, ContactNetwork_test, ContactNetwork_fc
-from e2efold.models import ContactAttention, ContactAttention_simple_fix_PE
-from e2efold.models import Lag_PP_NN, RNA_SS_e2e, Lag_PP_zero, Lag_PP_perturb, Lag_PP_final
-from e2efold.models import Lag_PP_mixed, ContactAttention_simple
-from e2efold.common.utils import *
-from e2efold.common.long_seq_pre_post_process import *
-from e2efold.postprocess import postprocess
-
 d = config.u_net_d
+nameof_exper = config.exp_name
 BATCH_SIZE = config.BATCH_SIZE
 OUT_STEP = config.OUT_STEP
 LOAD_MODEL = config.LOAD_MODEL
@@ -54,7 +54,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 # for loading data
-# loading the rna ss data, the data has been preprocessed
+# loading the RNA secondary structure (SS) data, the data has been preprocessed
 # 5s data is just a demo data, which do not have pseudoknot, will generate another data having that
 from e2efold.data_generator import RNASSDataGenerator, Dataset, Dataset_1800
 import collections
@@ -95,10 +95,8 @@ train_generator_1800 = data.DataLoader(train_set_1800, **params)
 val_set_1800 = Dataset_1800(val_data_1800)
 val_generator_1800 = data.DataLoader(val_set_1800, **params)
 
-params = {'batch_size': BATCH_SIZE,
-          'shuffle': False,
-          'num_workers': 6,
-          'drop_last': True}
+# TODO: changed  BATCH_SIZE to 1 for sake of testing,
+params = {'batch_size': 1, 'shuffle': False, 'num_workers': 6, 'drop_last': True}
 test_set = Dataset(test_data)
 test_generator = data.DataLoader(test_set, **params)
 
@@ -110,33 +108,21 @@ test_set_1800 = Dataset_1800(test_data_1800)
 test_generator_1800 = data.DataLoader(test_set_1800, **params)
 
 
-if model_type =='test_lc':
-    contact_net = ContactNetwork_test(d=d, L=seq_len).to(device)
-if model_type == 'att6':
-    contact_net = ContactAttention(d=d, L=seq_len).to(device)
-if model_type == 'att_simple':
-    contact_net = ContactAttention_simple(d=d, L=seq_len).to(device)    
-if model_type == 'att_simple_fix':
-    contact_net = ContactAttention_simple_fix_PE(d=d, L=seq_len, 
-        device=device).to(device)
-if model_type == 'fc':
-    contact_net = ContactNetwork_fc(d=d, L=seq_len).to(device)
-if model_type == 'conv2d_fc':
-    contact_net = ContactNetwork(d=d, L=seq_len).to(device)
+if model_type =='test_lc':         contact_net = ContactNetwork_test(d=d, L=seq_len).to(device)
+if model_type == 'att6':           contact_net = ContactAttention(d=d, L=seq_len).to(device)
+if model_type == 'att_simple':     contact_net = ContactAttention_simple(d=d, L=seq_len).to(device)    
+if model_type == 'att_simple_fix': contact_net = ContactAttention_simple_fix_PE(d=d, L=seq_len, device=device).to(device)
+if model_type == 'fc':             contact_net = ContactNetwork_fc(d=d, L=seq_len).to(device)
+if model_type == 'conv2d_fc':      contact_net = ContactNetwork(d=d, L=seq_len).to(device)
 
 # contact_net.conv1d2.register_forward_hook(get_activation('conv1d2'))
 
 # need to write the class for the computational graph of lang pp
-if pp_type=='nn':
-    lag_pp_net = Lag_PP_NN(pp_steps, k).to(device)
-if 'zero' in pp_type:
-    lag_pp_net = Lag_PP_zero(pp_steps, k).to(device)
-if 'perturb' in pp_type:
-    lag_pp_net = Lag_PP_perturb(pp_steps, k).to(device)
-if 'mixed'in pp_type:
-    lag_pp_net = Lag_PP_mixed(pp_steps, k, rho_per_position).to(device)
-if 'final'in pp_type:
-    lag_pp_net = Lag_PP_final(pp_steps, k, rho_per_position).to(device)
+if pp_type=='nn': lag_pp_net = Lag_PP_NN(pp_steps, k).to(device)
+if 'zero' in pp_type: lag_pp_net = Lag_PP_zero(pp_steps, k).to(device)
+if 'perturb' in pp_type: lag_pp_net = Lag_PP_perturb(pp_steps, k).to(device)
+if 'mixed'in pp_type: lag_pp_net = Lag_PP_mixed(pp_steps, k, rho_per_position).to(device)
+if 'final'in pp_type: lag_pp_net = Lag_PP_final(pp_steps, k, rho_per_position).to(device)
 
 if LOAD_MODEL and os.path.isfile(model_path):
     print('Loading u net model...')
@@ -363,8 +349,8 @@ def save_prediction():
     with open('../results/rnastralign_long_prediction_dict.pickle', 'wb') as f:
         pickle.dump(final_result_dict, f)
 
-all_test_only_e2e()
-
+# all_test_only_e2e()
+all_test_only_e2e(test_generator, contact_net, lag_pp_net, device, test_data, nameof_exper)
 
 
 

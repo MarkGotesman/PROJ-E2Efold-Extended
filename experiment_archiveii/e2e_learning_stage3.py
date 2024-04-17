@@ -1,3 +1,4 @@
+
 from torch.utils import data
 
 from e2efold.models import ContactNetwork, ContactNetwork_test, ContactNetwork_fc
@@ -6,6 +7,7 @@ from e2efold.models import Lag_PP_NN, RNA_SS_e2e, Lag_PP_zero, Lag_PP_perturb
 from e2efold.models import Lag_PP_mixed, ContactAttention_simple
 from e2efold.common.utils import *
 from e2efold.common.config import process_config
+from e2efold.evaluation import all_test_only_e2e, concat_nameof_output
 
 args = get_args()
 
@@ -14,11 +16,12 @@ config_file = args.config
 config = process_config(config_file)
 print("#####Stage 3#####")
 print('Here is the configuration of this run: ')
-print(config)
+print(pretty_obj(config))
 
 os.environ["CUDA_VISIBLE_DEVICES"]= config.gpu
 
 d = config.u_net_d
+nameof_exper = config.exp_name
 BATCH_SIZE = config.BATCH_SIZE
 OUT_STEP = config.OUT_STEP
 LOAD_MODEL = config.LOAD_MODEL
@@ -47,7 +50,7 @@ seed_torch(0)
 
 
 # for loading data
-# loading the rna ss data, the data has been preprocessed
+# loading the RNA secondary structure (SS) data, the data has been preprocessed
 # 5s data is just a demo data, which do not have pseudoknot, will generate another data having that
 from e2efold.data_generator import RNASSDataGenerator, Dataset
 import collections
@@ -187,67 +190,87 @@ def per_family_evaluation():
     f1_pp = list()
     seq_lens_list = list()
 
-    batch_n = 0
+    countof_batches_elapsed = 0
+    countof_seq_per_batch = test_generator.batch_size
     for contacts, seq_embeddings, matrix_reps, seq_lens in test_generator:
-        if batch_n %10==0:
-            print('Batch number: ', batch_n)
-        batch_n += 1
+        if countof_batches_elapsed == 10: break # TODO: remove
+        if countof_batches_elapsed %1==0:
+            print('Batch number: ', countof_batches_elapsed)
+        countof_batches_elapsed += 1
         contacts_batch = torch.Tensor(contacts.float()).to(device)
         seq_embedding_batch = torch.Tensor(seq_embeddings.float()).to(device)
-        matrix_reps_batch = torch.unsqueeze(
-            torch.Tensor(matrix_reps.float()).to(device), -1)
-
         state_pad = torch.zeros(contacts.shape).to(device)
 
+        # PE = Position Embedding
         PE_batch = get_pe(seq_lens, contacts.shape[-1]).float().to(device)
         with torch.no_grad():
-            pred_contacts = contact_net(PE_batch, 
-                seq_embedding_batch, state_pad)
+            pred_contacts = contact_net(PE_batch, seq_embedding_batch, state_pad)
             a_pred_list = lag_pp_net(pred_contacts, seq_embedding_batch)
-
         # the learning pp result
         final_pred = (a_pred_list[-1].cpu()>0.5).float()
-        result_tmp = list(map(lambda i: evaluate_exact(final_pred.cpu()[i], 
-            contacts_batch.cpu()[i]), range(contacts_batch.shape[0])))
+        # The return from evaluate_exact(...) is a tuple of 3 tensors, representing:
+        # precision, recall, f1_score
+        result_tmp = list(map(lambda i: evaluate_exact(final_pred.cpu()[i], contacts_batch.cpu()[i]), range(contacts_batch.shape[0])))
         result_pp += result_tmp
 
-        result_tmp_shift = list(map(lambda i: evaluate_shifted(final_pred.cpu()[i], 
-            contacts_batch.cpu()[i]), range(contacts_batch.shape[0])))
+        result_tmp_shift = list(map(lambda i: evaluate_shifted(final_pred.cpu()[i], contacts_batch.cpu()[i]), range(contacts_batch.shape[0])))
         result_pp_shift += result_tmp_shift
-
-        f1_tmp = list(map(lambda i: F1_low_tri(final_pred.cpu()[i], 
-            contacts_batch.cpu()[i]), range(contacts_batch.shape[0])))
-        f1_pp += f1_tmp
+        
+        # Not sure why this was needed, commenting it out...
+        # f1_tmp = list(map(lambda i: F1_low_tri(final_pred.cpu()[i], contacts_batch.cpu()[i]), range(contacts_batch.shape[0])))
+        # f1_pp += f1_tmp
         seq_lens_list += list(seq_lens)
 
-
+    # p=precision, r=recall, f1=f1_score:
     pp_exact_p,pp_exact_r,pp_exact_f1 = zip(*result_pp)
-    pp_shift_p,pp_shift_r,pp_shift_f1 = zip(*result_pp_shift)  
+    pp_shift_p,pp_shift_r,pp_shift_f1 = zip(*result_pp_shift)
+    
+    # the following is inserted for arxiv ii
+    pp_exact_p  = np.nan_to_num(np.array(pp_exact_p))
+    pp_exact_r  = np.nan_to_num(np.array(pp_exact_r))
+    pp_exact_f1 = np.nan_to_num(np.array(pp_exact_f1))
+    pp_shift_p  = np.nan_to_num(np.array(pp_shift_p))
+    pp_shift_r  = np.nan_to_num(np.array(pp_shift_r))
+    pp_shift_f1 = np.nan_to_num(np.array(pp_shift_f1))
+    
+    # dictof_result_avg = dict()
+    # dictof_result_avg['Prec']    = [np.average(pp_exact_p)]  # Average testing precision with learning post-processing
+    # dictof_result_avg['Rec']     = [np.average(pp_exact_r)]  # Average testing recall with learning post-processing
+    # dictof_result_avg['F1']      = [np.average(pp_exact_f1)] # Average testing F1 score with learning post-processing
+    # dictof_result_avg['Prec(S)'] = [np.average(pp_shift_p)]  # Average testing precision with learning post-processing allow shift
+    # dictof_result_avg['Rec(S)']  = [np.average(pp_shift_r)]  # Average testing recall with learning post-processing allow shift
+    # dictof_result_avg['F1(S)']   = [np.average(pp_shift_f1)] # Average testing F1 score with learning post-processing allow shift
 
-    e2e_result_df = pd.DataFrame()
-    e2e_result_df['name'] = [a.name for a in test_data.data]
-    e2e_result_df['type'] = list(map(lambda x: x.split('_')[0], [a.name for a in test_data.data]))
-    e2e_result_df['seq_lens'] = list(map(lambda x: x.numpy(), seq_lens_list))
-    e2e_result_df['exact_p'] = pp_exact_p
-    e2e_result_df['exact_r'] = pp_exact_r
-    e2e_result_df['exact_f1'] = pp_exact_f1
-    e2e_result_df['shift_p'] = pp_shift_p
-    e2e_result_df['shift_r'] = pp_shift_r
-    e2e_result_df['shift_f1'] = pp_shift_f1
+    # nameof_output_avg = concat_nameof_output(nameof_exper, 'result_avg')
+    # write_dict_csv(dictof_result_avg, nameof_file=nameof_output_avg, cond_auto_open=False)
+    
+    dictof_result_indiv = dict()
+    countof_indiv = countof_batches_elapsed * countof_seq_per_batch
+    dictof_result_indiv['name'] = [indiv.name for indiv in test_data.data[:countof_indiv]]
+    dictof_result_indiv['type'] = list(map(lambda x: x.split('_')[0], [a.name for a in test_data.data[:countof_indiv]]))
+    dictof_result_indiv['seq_len'] = [seq_lens.item() for seq_lens in seq_lens_list]
+    dictof_result_indiv['exact_p'] = pp_exact_p
+    dictof_result_indiv['exact_r'] = pp_exact_r
+    dictof_result_indiv['exact_f1'] = pp_exact_f1
+    dictof_result_indiv['shift_p'] = pp_shift_p
+    dictof_result_indiv['shift_r'] = pp_shift_r
+    dictof_result_indiv['shift_f1'] = pp_shift_f1
+    # result_dict['exact_weighted_f1'] = np.sum(np.array(pp_exact_f1)*np.array(seq_lens_list)/np.sum(seq_lens_list))
+    # result_dict['shift_weighted_f1'] = np.sum(np.array(pp_shift_f1)*np.array(seq_lens_list)/np.sum(seq_lens_list))
+    nameof_output_indiv = concat_nameof_output(nameof_exper, 'result_indiv')
+    # write_dict_csv(dictof_result_indiv, nameof_file=nameof_output_indiv, cond_auto_open=False)
+    
     # pdb.set_trace()
-    final_result = e2e_result_df[e2e_result_df['type'].isin(
+    dfof_result_indiv = pd.DataFrame(dictof_result_indiv)
+    final_result = dfof_result_indiv[dfof_result_indiv['type'].isin(
         ['RNaseP', '5s', 'tmRNA', 'tRNA', 'telomerase', '16s'])]
     to_output = list(map(str, 
         list(final_result[['exact_p', 'exact_r', 'exact_f1', 'shift_p','shift_r', 'shift_f1']].mean().values.round(3))))
     print('Number of sequences: ', len(final_result))
+    write_dict_csv(dfof_result_indiv.to_dict(), nameof_file=nameof_output_indiv, cond_auto_open=False)
     print(to_output)
 
-
-per_family_evaluation()
-
-
-
-
-
-
-
+# per_family_evaluation()
+listof_type_filters = ['RNaseP', '5s', 'tmRNA', 'tRNA', 'telomerase', '16s']
+# listof_type_filters = ['RNaseP', 'tmRNA', 'tRNA', 'telomerase', '16s'] # NOTE: taking out 5s for experiment
+all_test_only_e2e(test_generator, contact_net, lag_pp_net, device, test_data, nameof_exper, listof_type_filters, cond_save_ct_prediction=True)
