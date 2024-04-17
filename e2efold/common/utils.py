@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import time
 import numpy as np
 from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_score
 import math
@@ -13,6 +14,8 @@ import pandas as pd
 from scipy.sparse import diags
 import random
 import os
+import json
+import csv
 
 label_dict = {
     '.': np.array([1,0,0]), 
@@ -473,11 +476,11 @@ def extract_pseudoknot(data):
                 print(i,j)
                 break
 
+# PE = Position Embedding
 def get_pe(seq_lens, max_len):
-    num_seq = seq_lens.shape[0]
-    pos_i_abs = torch.Tensor(np.arange(1,max_len+1)).view(1, 
-        -1, 1).expand(num_seq, -1, -1).double()
-    pos_i_rel = torch.Tensor(np.arange(1,max_len+1)).view(1, -1).expand(num_seq, -1)
+    countof_sequences = seq_lens.shape[0]
+    pos_i_abs = torch.Tensor(np.arange(1,max_len+1)).view(1, -1, 1).expand(countof_sequences, -1, -1).double()
+    pos_i_rel = torch.Tensor(np.arange(1,max_len+1)).view(1, -1).expand(countof_sequences, -1)
     pos_i_rel = pos_i_rel.double()/seq_lens.view(-1, 1).double()
     pos_i_rel = pos_i_rel.unsqueeze(-1)
     pos = torch.cat([pos_i_abs, pos_i_rel], -1)
@@ -502,7 +505,7 @@ def get_pe(seq_lens, max_len):
         PE_element_list.append(gaussian_base)
 
     PE = torch.cat(PE_element_list, -1)
-    for i in range(num_seq):
+    for i in range(countof_sequences):
         PE[i, seq_lens[i]:, :] = 0
     return PE
 
@@ -516,8 +519,33 @@ def seed_torch(seed=0):
     torch.backends.cudnn.benchmark = False
     torch.backends.cudnn.deterministic = True
 
+def pretty_obj(obj, indent=2, sort_keys=False):
+    return json.dumps(obj, indent=indent, sort_keys=sort_keys, cls=Encoder)
 
+    
+class Encoder(json.JSONEncoder):
+    def default(self, obj):
+        if isinstance(obj, np.ndarray):
+            return obj.tolist()
+        if isinstance(obj, torch.Tensor):
+            return obj.numpy()
+        return json.JSONEncoder.default(self, obj)    
 
-
-
-
+def write_tensor_csv(tensor, nameof_file='tensor_data.csv', fmt='%d', delimiter=',', cond_auto_open = True):
+    os.system("cmd.exe /C taskkill /im excel.exe /t /f")
+    time.sleep(.5) #TODO: this is bad but quick fix
+    np.savetxt(nameof_file, tensor.squeeze().numpy(), fmt, delimiter)
+    if (cond_auto_open): os.system(f"cmd.exe /C start excel.exe {nameof_file}")
+    
+def write_dict_csv(dic, nameof_file='dict_data.csv', index=False, cond_auto_open = True):
+    os.system("cmd.exe /C taskkill /im excel.exe /t /f")
+    time.sleep(.5) #TODO: this is bad but quick fix
+    df = pd.DataFrame(dic)
+    df.to_csv(nameof_file, index=index)
+    if (cond_auto_open): os.system(f"cmd.exe /C start excel.exe {nameof_file}")
+    
+def write_df_csv(df, nameof_file='df_data.csv', index=False, cond_auto_open=True):
+    os.system("cmd.exe /C taskkill /im excel.exe /t /f")
+    time.sleep(.5) #TODO: this is bad but quick fix
+    df.to_csv(nameof_file, index=index)
+    if (cond_auto_open): os.system(f"cmd.exe /C start excel.exe {nameof_file}")
