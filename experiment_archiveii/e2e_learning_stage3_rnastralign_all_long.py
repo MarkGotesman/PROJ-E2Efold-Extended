@@ -43,6 +43,7 @@ epoches_third = config.epoches_third
 evaluate_epi = config.evaluate_epi
 step_gamma = config.step_gamma
 k = config.k
+cond_save_ct_predictions = config.save_ct_predictions
 
 
 steps_done = 0
@@ -301,56 +302,9 @@ def all_test_only_e2e():
     # with open('../results/archiveii_long_e2e_evaluation_dict.pickle', 'wb') as f:
     #     pickle.dump(result_dict, f)
 
-def save_prediction():
-    contact_net.eval()
-    lag_pp_net.eval()
-
-    final_result_dict = dict()
-
-    # for long sequences
-    batch_n = 0
-    for seq_embedding_batch, PE_batch, _, comb_index, seq_embeddings, contacts, seq_lens in test_generator_1800:
-        if batch_n % 10==0:
-            print('Batch number: ', batch_n)
-
-        state_pad = torch.zeros(1,2,2).to(device)
-        seq_embedding_batch = seq_embedding_batch[0].to(device)
-        PE_batch = PE_batch[0].to(device)
-        seq_embedding = torch.Tensor(seq_embeddings.float()).to(device)
-        contact_masks = torch.Tensor(contact_map_masks(seq_lens, 1800)).to(device)
-
-        with torch.no_grad():
-            pred_contacts = contact_net(PE_batch, seq_embedding_batch, state_pad)
-            pred_u_map = combine_chunk_u_maps_no_replace(pred_contacts, comb_index, 6)
-            pred_u_map = pred_u_map.unsqueeze(0)
-            a_pred_list = lag_pp_net(pred_u_map, seq_embedding)
-
-        #  ground truth 
-        contacts_batch = torch.Tensor(contacts.float()[:,:1800, :1800])
-        # the learning pp result
-        final_pred = (a_pred_list[-1].cpu()>0.5).float()
-        f1_tmp = list(map(lambda i: F1_low_tri(final_pred.cpu()[i], 
-            contacts_batch.cpu()[i]), range(contacts_batch.shape[0])))
-
-        ct_tmp = contact2ct(final_pred[0].cpu().numpy(), 
-            seq_embedding[0].cpu().numpy(), seq_lens.numpy()[0])
-        true_ct_tmp = contact2ct(contacts_batch[0].cpu().numpy(), 
-            seq_embedding[0].cpu().numpy(), seq_lens.numpy()[0])
-
-        result_dict = dict()
-        result_dict['name'] = test_data_1800.data[batch_n].name
-        result_dict['f1'] = f1_tmp[0]
-        result_dict['pred_ct'] = ct_tmp
-        result_dict['true_ct'] = true_ct_tmp
-
-        final_result_dict[test_data_1800.data[batch_n].name] = result_dict
-
-        batch_n += 1
-    with open('../results/rnastralign_long_prediction_dict.pickle', 'wb') as f:
-        pickle.dump(final_result_dict, f)
 
 # all_test_only_e2e()
-all_test_only_e2e(test_generator, contact_net, lag_pp_net, device, test_data, nameof_exper)
+all_test_only_e2e(test_generator, contact_net, lag_pp_net, device, test_data, nameof_exper, cond_save_ct_predictions)
 
 
 

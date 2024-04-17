@@ -40,6 +40,7 @@ epoches_third = config.epoches_third
 evaluate_epi = config.evaluate_epi
 step_gamma = config.step_gamma
 k = config.k
+cond_save_ct_predictions = config.save_ct_predictions
 
 
 steps_done = 0
@@ -128,54 +129,6 @@ rna_ss_e2e = RNA_SS_e2e(contact_net, lag_pp_net)
 if LOAD_MODEL and os.path.isfile(e2e_model_path):
     print('Loading e2e model...')
     rna_ss_e2e.load_state_dict(torch.load(map_location=device, f=e2e_model_path))
-
-
-def save_prediction():
-    contact_net.eval()
-    lag_pp_net.eval()
-
-    final_result_dict = dict()
-
-    # for long sequences
-    batch_n = 0
-    for contacts, seq_embeddings, matrix_reps, seq_lens in test_generator:
-        if batch_n % 10==0:
-            print('Batch number: ', batch_n)
-
-        contacts_batch = torch.Tensor(contacts.float()).to(device)
-        seq_embedding_batch = torch.Tensor(seq_embeddings.float()).to(device)
-        matrix_reps_batch = torch.unsqueeze(
-            torch.Tensor(matrix_reps.float()).to(device), -1)
-
-        state_pad = torch.zeros(1,2,2).to(device)
-
-        PE_batch = get_pe(seq_lens, contacts.shape[-1]).float().to(device)
-        with torch.no_grad():
-            pred_contacts = contact_net(PE_batch, 
-                seq_embedding_batch, state_pad)
-            a_pred_list = lag_pp_net(pred_contacts, seq_embedding_batch)
-
-        # the learning pp result
-        final_pred = (a_pred_list[-1].cpu()>0.5).float()
-        f1_tmp = list(map(lambda i: F1_low_tri(final_pred.cpu()[i], 
-            contacts_batch.cpu()[i]), range(contacts_batch.shape[0])))
-
-        ct_tmp = contact2ct(final_pred[0].cpu().numpy(), 
-            seq_embeddings[0].cpu().numpy(), seq_lens.numpy()[0])
-        true_ct_tmp = contact2ct(contacts_batch[0].cpu().numpy(), 
-            seq_embeddings[0].cpu().numpy(), seq_lens.numpy()[0])
-
-        result_dict = dict()
-        result_dict['name'] = test_data.data[batch_n].name
-        result_dict['f1'] = f1_tmp[0]
-        result_dict['pred_ct'] = ct_tmp
-        result_dict['true_ct'] = true_ct_tmp
-
-        final_result_dict[test_data.data[batch_n].name] = result_dict
-
-        batch_n += 1
-    # with open('../results/archiveii_short_prediction_dict.pickle', 'wb') as f:
-    #     pickle.dump(final_result_dict, f)
 
 
 def per_family_evaluation():
@@ -273,4 +226,4 @@ def per_family_evaluation():
 # per_family_evaluation()
 listof_type_filters = ['RNaseP', '5s', 'tmRNA', 'tRNA', 'telomerase', '16s']
 # listof_type_filters = ['RNaseP', 'tmRNA', 'tRNA', 'telomerase', '16s'] # NOTE: taking out 5s for experiment
-all_test_only_e2e(test_generator, contact_net, lag_pp_net, device, test_data, nameof_exper, listof_type_filters, cond_save_ct_prediction=True)
+all_test_only_e2e(test_generator, contact_net, lag_pp_net, device, test_data, nameof_exper, cond_save_ct_predictions, listof_type_filters)

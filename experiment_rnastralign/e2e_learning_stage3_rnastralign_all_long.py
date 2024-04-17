@@ -23,24 +23,25 @@ print(pretty_obj(config))
 
 os.environ["CUDA_VISIBLE_DEVICES"]= config.gpu
 
-d                = config.u_net_d
-nameof_exper     = config.exp_name
-BATCH_SIZE       = config.BATCH_SIZE
-OUT_STEP         = config.OUT_STEP
-LOAD_MODEL       = config.LOAD_MODEL    
-pp_steps         = config.pp_steps
-pp_loss          = config.pp_loss
-data_type        = config.data_type
-model_type       = config.model_type
-pp_type          = '{}_s{}'.format(config.pp_model, pp_steps)
-rho_per_position = config.rho_per_position
-model_path       = config.data_root+'models_ckpt/supervised_{}_{}_d{}_l3.pt'.format(model_type, data_type,d)
-pp_model_path    = config.data_root+'models_ckpt/lag_pp_{}_{}_{}_position_{}.pt'.format(pp_type, data_type, pp_loss,rho_per_position)
-e2e_model_path   = config.data_root+'models_ckpt/e2e_{}_{}_d{}_{}_{}_position_{}.pt'.format(model_type, pp_type,d, data_type, pp_loss,rho_per_position)
-epoches_third    = config.epoches_third
-evaluate_epi     = config.evaluate_epi
-step_gamma       = config.step_gamma
-k                = config.k
+d                        = config.u_net_d
+nameof_exper             = config.exp_name
+BATCH_SIZE               = config.BATCH_SIZE
+OUT_STEP                 = config.OUT_STEP
+LOAD_MODEL               = config.LOAD_MODEL    
+pp_steps                 = config.pp_steps
+pp_loss                  = config.pp_loss
+data_type                = config.data_type
+model_type               = config.model_type
+pp_type                  = '{}_s{}'.format(config.pp_model, pp_steps)
+rho_per_position         = config.rho_per_position
+model_path               = config.data_root+'models_ckpt/supervised_{}_{}_d{}_l3.pt'.format(model_type, data_type,d)
+pp_model_path            = config.data_root+'models_ckpt/lag_pp_{}_{}_{}_position_{}.pt'.format(pp_type, data_type, pp_loss,rho_per_position)
+e2e_model_path           = config.data_root+'models_ckpt/e2e_{}_{}_d{}_{}_{}_position_{}.pt'.format(model_type, pp_type,d, data_type, pp_loss,rho_per_position)
+epoches_third            = config.epoches_third
+evaluate_epi             = config.evaluate_epi
+step_gamma               = config.step_gamma
+k                        = config.k
+cond_save_ct_predictions = config.save_ct_predictions
 
 steps_done = 0
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # if gpu is to be used
@@ -290,91 +291,24 @@ def model_eval():
 #     print('Average testing recall with zero parameter pp allow shift: ', np.average(nt_shift_r))
 
 
-# def all_test_only_e2e():
-#     contact_net.eval()
-#     lag_pp_net.eval()
-#     result_no_train = list()
-#     result_no_train_shift = list()
-#     result_pp = list()
-#     result_pp_shift = list()
-
-#     f1_no_train = list()
-#     f1_pp = list()
-#     seq_lens_list = list()
-
-#     # for long sequences
-#     batch_n = 0
-#     for seq_embedding_batch, PE_batch, _, comb_index, seq_embeddings, contacts, seq_lens in test_generator_1800:
-#         if batch_n % 10==0:
-#             print('Batch number: ', batch_n)
-#         batch_n += 1
-
-#         state_pad = torch.zeros(1,2,2).to(device)
-#         seq_embedding_batch = seq_embedding_batch[0].to(device)
-#         PE_batch = PE_batch[0].to(device)
-#         seq_embedding = torch.Tensor(seq_embeddings.float()).to(device)
-#         contact_masks = torch.Tensor(contact_map_masks(seq_lens, 1800)).to(device)
-
-    
-#         with torch.no_grad():
-#             pred_contacts = contact_net(PE_batch, seq_embedding_batch, state_pad)
-#             pred_u_map = combine_chunk_u_maps_no_replace(pred_contacts, comb_index, 6)
-#             pred_u_map = pred_u_map.unsqueeze(0)
-#             a_pred_list = lag_pp_net(pred_u_map, seq_embedding)
-
-#         #  ground truth 
-#         contacts_batch = torch.Tensor(contacts.float()[:,:1800, :1800])
-
-#         # the learning pp result
-#         final_pred = (a_pred_list[-1].cpu()>0.5).float()
-#         result_tmp = list(map(lambda i: evaluate_exact(final_pred.cpu()[i], 
-#             contacts_batch.cpu()[i]), range(contacts_batch.shape[0])))
-#         result_pp += result_tmp
-
-#         result_tmp_shift = list(map(lambda i: evaluate_shifted(final_pred.cpu()[i], 
-#             contacts_batch.cpu()[i]), range(contacts_batch.shape[0])))
-#         result_pp_shift += result_tmp_shift
-
-#         f1_tmp = list(map(lambda i: F1_low_tri(final_pred.cpu()[i], 
-#             contacts_batch.cpu()[i]), range(contacts_batch.shape[0])))
-#         f1_pp += f1_tmp
-#         seq_lens_list += list(seq_lens)
-
-#     pp_exact_p,pp_exact_r,pp_exact_f1 = zip(*result_pp)
-#     pp_shift_p,pp_shift_r,pp_shift_f1 = zip(*result_pp_shift)  
-#     print('Average testing F1 score with learning post-processing: ', np.average(pp_exact_f1))
-#     print('Average testing F1 score with learning post-processing allow shift: ', np.average(pp_shift_f1))
-
-#     print('Average testing precision with learning post-processing: ', np.average(pp_exact_p))
-#     print('Average testing precision with learning post-processing allow shift: ', np.average(pp_shift_p))
-
-#     print('Average testing recall with learning post-processing: ', np.average(pp_exact_r))
-#     print('Average testing recall with learning post-processing allow shift: ', np.average(pp_shift_r))
-#     result_dict = dict()
-#     result_dict['exact_p'] = pp_exact_p
-#     result_dict['exact_r'] = pp_exact_r
-#     result_dict['exact_f1'] = pp_exact_f1
-#     result_dict['shift_p'] = pp_shift_p
-#     result_dict['shift_r'] = pp_shift_r
-#     result_dict['shift_f1'] = pp_shift_f1
-#     result_dict['seq_lens'] = seq_lens_list
-#     result_dict['exact_weighted_f1'] = np.sum(np.array(pp_exact_f1)*np.array(seq_lens_list)/np.sum(seq_lens_list))
-#     result_dict['shift_weighted_f1'] = np.sum(np.array(pp_shift_f1)*np.array(seq_lens_list)/np.sum(seq_lens_list))
-#     import _pickle as pickle
-#     with open('../results/rnastralign_long_e2e_evaluation_dict.pickle', 'wb') as f:
-#         pickle.dump(result_dict, f)
-
-def save_prediction():
+def all_test_only_e2e():
     contact_net.eval()
     lag_pp_net.eval()
+    result_no_train = list()
+    result_no_train_shift = list()
+    result_pp = list()
+    result_pp_shift = list()
 
-    final_result_dict = dict()
+    f1_no_train = list()
+    f1_pp = list()
+    seq_lens_list = list()
 
     # for long sequences
     batch_n = 0
     for seq_embedding_batch, PE_batch, _, comb_index, seq_embeddings, contacts, seq_lens in test_generator_1800:
         if batch_n % 10==0:
             print('Batch number: ', batch_n)
+        batch_n += 1
 
         state_pad = torch.zeros(1,2,2).to(device)
         seq_embedding_batch = seq_embedding_batch[0].to(device)
@@ -382,6 +316,7 @@ def save_prediction():
         seq_embedding = torch.Tensor(seq_embeddings.float()).to(device)
         contact_masks = torch.Tensor(contact_map_masks(seq_lens, 1800)).to(device)
 
+    
         with torch.no_grad():
             pred_contacts = contact_net(PE_batch, seq_embedding_batch, state_pad)
             pred_u_map = combine_chunk_u_maps_no_replace(pred_contacts, comb_index, 6)
@@ -390,28 +325,45 @@ def save_prediction():
 
         #  ground truth 
         contacts_batch = torch.Tensor(contacts.float()[:,:1800, :1800])
+
         # the learning pp result
         final_pred = (a_pred_list[-1].cpu()>0.5).float()
+        result_tmp = list(map(lambda i: evaluate_exact(final_pred.cpu()[i], 
+            contacts_batch.cpu()[i]), range(contacts_batch.shape[0])))
+        result_pp += result_tmp
+
+        result_tmp_shift = list(map(lambda i: evaluate_shifted(final_pred.cpu()[i], 
+            contacts_batch.cpu()[i]), range(contacts_batch.shape[0])))
+        result_pp_shift += result_tmp_shift
+
         f1_tmp = list(map(lambda i: F1_low_tri(final_pred.cpu()[i], 
             contacts_batch.cpu()[i]), range(contacts_batch.shape[0])))
+        f1_pp += f1_tmp
+        seq_lens_list += list(seq_lens)
 
-        ct_tmp = contact2ct(final_pred[0].cpu().numpy(), 
-            seq_embedding[0].cpu().numpy(), seq_lens.numpy()[0])
-        true_ct_tmp = contact2ct(contacts_batch[0].cpu().numpy(), 
-            seq_embedding[0].cpu().numpy(), seq_lens.numpy()[0])
+    pp_exact_p,pp_exact_r,pp_exact_f1 = zip(*result_pp)
+    pp_shift_p,pp_shift_r,pp_shift_f1 = zip(*result_pp_shift)  
+    print('Average testing F1 score with learning post-processing: ', np.average(pp_exact_f1))
+    print('Average testing F1 score with learning post-processing allow shift: ', np.average(pp_shift_f1))
 
-        result_dict = dict()
-        result_dict['name'] = test_data_1800.data[batch_n].name
-        result_dict['f1'] = f1_tmp[0]
-        result_dict['pred_ct'] = ct_tmp
-        result_dict['true_ct'] = true_ct_tmp
+    print('Average testing precision with learning post-processing: ', np.average(pp_exact_p))
+    print('Average testing precision with learning post-processing allow shift: ', np.average(pp_shift_p))
 
-        final_result_dict[test_data_1800.data[batch_n].name] = result_dict
-
-        batch_n += 1
-    with open('../results/rnastralign_long_prediction_dict.pickle', 'wb') as f:
-        pickle.dump(final_result_dict, f)
-
+    print('Average testing recall with learning post-processing: ', np.average(pp_exact_r))
+    print('Average testing recall with learning post-processing allow shift: ', np.average(pp_shift_r))
+    result_dict = dict()
+    result_dict['exact_p'] = pp_exact_p
+    result_dict['exact_r'] = pp_exact_r
+    result_dict['exact_f1'] = pp_exact_f1
+    result_dict['shift_p'] = pp_shift_p
+    result_dict['shift_r'] = pp_shift_r
+    result_dict['shift_f1'] = pp_shift_f1
+    result_dict['seq_lens'] = seq_lens_list
+    result_dict['exact_weighted_f1'] = np.sum(np.array(pp_exact_f1)*np.array(seq_lens_list)/np.sum(seq_lens_list))
+    result_dict['shift_weighted_f1'] = np.sum(np.array(pp_shift_f1)*np.array(seq_lens_list)/np.sum(seq_lens_list))
+    import _pickle as pickle
+    with open('../results/rnastralign_long_e2e_evaluation_dict.pickle', 'wb') as f:
+        pickle.dump(result_dict, f)
 
 
 # There are three steps of training
@@ -545,4 +497,4 @@ if not args.test:
 
 
 # all_test_only_e2e()
-all_test_only_e2e(test_generator, contact_net, lag_pp_net, device, test_data, nameof_exper)
+all_test_only_e2e(test_generator, contact_net, lag_pp_net, device, test_data, nameof_exper, cond_save_ct_predictions)
