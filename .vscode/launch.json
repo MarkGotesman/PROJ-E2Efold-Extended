@@ -29,7 +29,7 @@
 			"program": "'${workspaceFolder}'/experiment_archiveii/e2e_learning_stage3.py",
 			"console": "integratedTerminal",
 			"cwd": "${workspaceFolder}/experiment_archiveii",
-			"args": "-c config.json --test True"
+			"args": "-c config.json"
 		},
 		{
 			"name": "ArchiveII: Long",
@@ -38,7 +38,7 @@
 			"program": "'${workspaceFolder}'/experiment_archiveii/e2e_learning_stage3_rnastralign_all_long.py",
 			"console": "integratedTerminal",
 			"cwd": "${workspaceFolder}/experiment_archiveii",
-			"args": "-c config_long.json --test True"
+			"args": "-c config_long.json"
 		},
 		{
 			"name": "Current File with CWD",
