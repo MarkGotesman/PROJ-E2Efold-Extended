@@ -48,8 +48,8 @@ RNA_SS_data = collections.namedtuple('RNA_SS_data', 'seq ss_label length name pa
 
 test_data = RNASSDataGenerator(config.data_root+'data/{}/'.format(config.test_data_type), 'all_600')
 
-seq_len = test_data.maxof_seq_len
-print('Max seq length ', seq_len)
+train_maxof_seq_len = test_data.maxof_seq_len
+print('Max seq length ', train_maxof_seq_len)
 
 params = {'batch_size': 1, 'shuffle': False, 'num_workers': 6, 'drop_last': False}
 test_set = Dataset(test_data)
@@ -62,12 +62,12 @@ def get_activation(name):
         activation[name] = output.detach()
     return hook
 
-if (model_type == 'test_lc'):        contact_net = ContactNetwork_test(d=d, L=seq_len).to(device)
-if (model_type == 'att6'):           contact_net = ContactAttention(d=d, L=seq_len).to(device)
-if (model_type == 'att_simple'):     contact_net = ContactAttention_simple(d=d, L=seq_len).to(device)    
-if (model_type == 'att_simple_fix'): contact_net = ContactAttention_simple_fix_PE(d=d, L=seq_len).to(device)
-if (model_type == 'fc'):             contact_net = ContactNetwork_fc(d=d, L=seq_len).to(device)
-if (model_type == 'conv2d_fc'):      contact_net = ContactNetwork(d=d, L=seq_len).to(device)
+if (model_type == 'test_lc'):        contact_net = ContactNetwork_test           (d=d, L=train_maxof_seq_len).to(device)
+if (model_type == 'att6'):           contact_net = ContactAttention              (d=d, L=train_maxof_seq_len).to(device)
+if (model_type == 'att_simple'):     contact_net = ContactAttention_simple       (d=d, L=train_maxof_seq_len).to(device)    
+if (model_type == 'att_simple_fix'): contact_net = ContactAttention_simple_fix_PE(d=d, L=train_maxof_seq_len).to(device)
+if (model_type == 'fc'):             contact_net = ContactNetwork_fc             (d=d, L=train_maxof_seq_len).to(device)
+if (model_type == 'conv2d_fc'):      contact_net = ContactNetwork                (d=d, L=train_maxof_seq_len).to(device)
 
 # contact_net.conv1d2.register_forward_hook(get_activation('conv1d2'))
 

@@ -51,8 +51,8 @@ train_data  = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 
 val_data    = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'val')
 test_data   = RNASSDataGenerator(config.data_root+'data/rnastralign_all/', 'test_no_redundant_600')
 
-seq_len = train_data.maxof_seq_len
-print('Max seq length ', seq_len)
+train_maxof_seq_len = train_data.maxof_seq_len
+print('Max seq length ', train_maxof_seq_len)
 
 # Using Pytorch DataLoader API.
 params = {'batch_size': BATCH_SIZE, 'shuffle': True, 'num_workers': 6, 'drop_last': True}
@@ -71,18 +71,19 @@ test_generator = data.DataLoader(test_set, **params)
 # so that the model checkpoint data can be imported via contact_net.load_state_dict(...) 
 # to the respective in-memory Pytorch model that it was trained on and exported from.
 # U-Net (utility/unconstrained score network; alternatively called contact network outputing a contact score map)
-if (model_type == 'test_lc'):        contact_net = ContactNetwork_test(d=d, L=seq_len).to(device)
-if (model_type == 'att6'):           contact_net = ContactAttention(d=d, L=seq_len).to(device)
-if (model_type == 'att_simple'):     contact_net = ContactAttention_simple(d=d, L=seq_len).to(device)    
-if (model_type == 'att_simple_fix'): contact_net = ContactAttention_simple_fix_PE(d=d, L=seq_len).to(device)
-if (model_type == 'fc'):             contact_net = ContactNetwork_fc(d=d, L=seq_len).to(device)
-if (model_type == 'conv2d_fc'):      contact_net = ContactNetwork(d=d, L=seq_len).to(device)
+if (model_type == 'test_lc'):        contact_net = ContactNetwork_test           (d=d, L=train_maxof_seq_len).to(device)
+if (model_type == 'att6'):           contact_net = ContactAttention              (d=d, L=train_maxof_seq_len).to(device)
+if (model_type == 'att_simple'):     contact_net = ContactAttention_simple       (d=d, L=train_maxof_seq_len).to(device)    
+if (model_type == 'att_simple_fix'): contact_net = ContactAttention_simple_fix_PE(d=d, L=train_maxof_seq_len).to(device)
+if (model_type == 'fc'):             contact_net = ContactNetwork_fc             (d=d, L=train_maxof_seq_len).to(device)
+if (model_type == 'conv2d_fc'):      contact_net = ContactNetwork                (d=d, L=train_maxof_seq_len).to(device)
+
 
 # PP-Net (note: Lag -> Lagrangian)
-if ('nn'      in pp_type): lag_pp_net = Lag_PP_NN(pp_steps, k).to(device)
-if ('zero'    in pp_type): lag_pp_net = Lag_PP_zero(pp_steps, k).to(device)
+if ('nn'      in pp_type): lag_pp_net = Lag_PP_NN     (pp_steps, k).to(device)
+if ('zero'    in pp_type): lag_pp_net = Lag_PP_zero   (pp_steps, k).to(device)
 if ('perturb' in pp_type): lag_pp_net = Lag_PP_perturb(pp_steps, k).to(device)
-if ('mixed'   in pp_type): lag_pp_net = Lag_PP_mixed(pp_steps, k, rho_per_position).to(device)
+if ('mixed'   in pp_type): lag_pp_net = Lag_PP_mixed  (pp_steps, k, rho_per_position).to(device)
 
 # End-to-end model
 rna_ss_e2e = RNA_SS_e2e(contact_net, lag_pp_net)
@@ -200,12 +201,12 @@ if not args.test:
             matrix_reps_batch = torch.unsqueeze(
                 torch.Tensor(matrix_reps.float()).to(device), -1)
             
-            contact_masks = torch.Tensor(contact_map_masks(seq_lens, seq_len)).to(device)
+            contact_masks = torch.Tensor(contact_map_masks(seq_lens, train_maxof_seq_len)).to(device)
             # padding the states for supervised training with all 0s
             state_pad = torch.zeros([matrix_reps_batch.shape[0], 
-                seq_len, seq_len]).to(device)
+                train_maxof_seq_len, train_maxof_seq_len]).to(device)
 
-            PE_batch = get_pe(seq_lens, seq_len).float().to(device)
+            PE_batch = get_pe(seq_lens, train_maxof_seq_len).float().to(device)
             # the end to end model
             pred_contacts, a_pred_list = rna_ss_e2e(PE_batch, 
                 seq_embedding_batch, state_pad)
@@ -219,7 +220,7 @@ if not args.test:
                 for i in range(pp_steps-1):
                     loss_a += np.power(step_gamma, pp_steps-1-i)*criterion_mse(
                         a_pred_list[i]*contact_masks, contacts_batch)
-                mse_coeff = 1.0/(seq_len*pp_steps)
+                mse_coeff = 1.0/(train_maxof_seq_len*pp_steps)
 
             if pp_loss == 'f1':
                 loss_a = f1_loss(a_pred_list[-1]*contact_masks, contacts_batch)
