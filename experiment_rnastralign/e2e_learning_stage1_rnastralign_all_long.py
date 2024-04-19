@@ -65,7 +65,7 @@ if data_type == 'rnastralign_all':
     test_data_1800 = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'test_no_redundant_1800')
 
 
-seq_len = train_data.data_y.shape[-2]
+seq_len = train_data.maxof_seq_len
 print('Max seq length ', seq_len)
 
 
@@ -205,8 +205,7 @@ def model_eval_all_test():
 
 
     for seq_embedding_batch, PE_batch, contacts_batch, _, _, _, seq_lens in test_generator_1800:
-        if batch_n%10==0:
-            print('Batch number: ', batch_n)
+        print('Batch number: ', batch_n)
         batch_n += 1
         seq_embedding_batch = seq_embedding_batch[0].to(device)
         PE_batch = PE_batch[0].to(device)
@@ -273,9 +272,9 @@ def model_eval_all_test_greedy_sort():
     seq_lens_list = list()
     batch_n = 0
     for seq_embedding_batch, PE_batch, contacts_batch, comb_index, _, contacts, seq_lens in test_generator_1800:
-        if batch_n%10==0:
-            print('Batch number: ', batch_n)
+        print('Batch number: ', batch_n)
         batch_n += 1
+        
         seq_embedding_batch = seq_embedding_batch[0].to(device)
         PE_batch = PE_batch[0].to(device)
         contacts_batch = contacts_batch[0]
@@ -336,8 +335,7 @@ def model_eval_all_test_greedy_sampling():
     seq_lens_list = list()
     batch_n = 0
     for seq_embedding_batch, PE_batch, contacts_batch, comb_index, _, contacts, seq_lens in test_generator_1800:
-        if batch_n%10==0:
-            print('Batch number: ', batch_n)
+        print('Batch number: ', batch_n)
         batch_n += 1
         seq_embedding_batch = seq_embedding_batch[0].to(device)
         PE_batch = PE_batch[0].to(device)

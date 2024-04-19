@@ -53,7 +53,7 @@ val_data = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'va
 # test_data = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'test_no_redundant')
 test_data = RNASSDataGenerator(config.data_root+'data/rnastralign_all/', 'test_no_redundant_600')
 
-seq_len = train_data.data_y.shape[-2]
+seq_len = train_data.maxof_seq_len
 print('Max seq length ', seq_len)
 
 
@@ -144,8 +144,7 @@ def model_eval_all_test():
     seq_lens_list = list()
     batch_n = 0
     for contacts, seq_embeddings, matrix_reps, seq_lens in test_generator:
-        if batch_n%10==0:
-            print('Batch number: ', batch_n)
+        print('Batch number: ', batch_n)
         batch_n += 1
         contacts_batch = torch.Tensor(contacts.float()).to(device)
         seq_embedding_batch = torch.Tensor(seq_embeddings.float()).to(device)
@@ -210,9 +209,9 @@ def model_eval_all_test_greedy_sort():
     seq_lens_list = list()
     batch_n = 0
     for contacts, seq_embeddings, matrix_reps, seq_lens in test_generator:
-        if batch_n%10==0:
-            print('Batch number: ', batch_n)
+        print('Batch number: ', batch_n)
         batch_n += 1
+        
         contacts_batch = torch.Tensor(contacts.float()).to(device)
         seq_embedding_batch = torch.Tensor(seq_embeddings.float()).to(device)
         matrix_reps_batch = torch.unsqueeze(
@@ -267,8 +266,7 @@ def model_eval_all_test_greedy_sampling():
     seq_lens_list = list()
     batch_n = 0
     for contacts, seq_embeddings, matrix_reps, seq_lens in test_generator:
-        if batch_n%10==0:
-            print('Batch number: ', batch_n)
+        print('Batch number: ', batch_n)
         batch_n += 1
         contacts_batch = torch.Tensor(contacts.float()).to(device)
         seq_embedding_batch = torch.Tensor(seq_embeddings.float()).to(device)
