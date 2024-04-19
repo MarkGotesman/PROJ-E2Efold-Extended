@@ -7,18 +7,15 @@ from e2efold.models import Lag_PP_NN, RNA_SS_e2e, Lag_PP_zero, Lag_PP_perturb
 from e2efold.models import Lag_PP_mixed, ContactAttention_simple
 from e2efold.common.utils import *
 from e2efold.common.config import process_config
-from e2efold.evaluation import all_test_only_e2e
+import e2efold.evaluation
 
+# Config Setup:
 args = get_args()
-
 config_file = args.config
-
 config = process_config(config_file)
 print("#####Stage 3#####")
 print('Here is the configuration of this run: ')
 print(pretty_obj(config))
-
-os.environ["CUDA_VISIBLE_DEVICES"]= config.gpu
 
 d                        = config.u_net_d
 nameof_exper             = config.exp_name
@@ -40,10 +37,8 @@ step_gamma               = config.step_gamma
 k                        = config.k
 cond_save_ct_predictions = config.save_ct_predictions
 
-steps_done = 0
+os.environ["CUDA_VISIBLE_DEVICES"]= config.gpu
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu") # if gpu is to be used
-
-# seed everything for reproduction
 seed_torch(0)
 
 # for loading data
@@ -56,7 +51,7 @@ train_data  = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 
 val_data    = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'val')
 test_data   = RNASSDataGenerator(config.data_root+'data/rnastralign_all/', 'test_no_redundant_600')
 
-seq_len = train_data.data_y.shape[-2]
+seq_len = train_data.maxof_seq_len
 print('Max seq length ', seq_len)
 
 # Using Pytorch DataLoader API.
@@ -79,7 +74,7 @@ test_generator = data.DataLoader(test_set, **params)
 if (model_type == 'test_lc'):        contact_net = ContactNetwork_test(d=d, L=seq_len).to(device)
 if (model_type == 'att6'):           contact_net = ContactAttention(d=d, L=seq_len).to(device)
 if (model_type == 'att_simple'):     contact_net = ContactAttention_simple(d=d, L=seq_len).to(device)    
-if (model_type == 'att_simple_fix'): contact_net = ContactAttention_simple_fix_PE(d=d, L=seq_len, device=device).to(device)
+if (model_type == 'att_simple_fix'): contact_net = ContactAttention_simple_fix_PE(d=d, L=seq_len).to(device)
 if (model_type == 'fc'):             contact_net = ContactNetwork_fc(d=d, L=seq_len).to(device)
 if (model_type == 'conv2d_fc'):      contact_net = ContactNetwork(d=d, L=seq_len).to(device)
 
@@ -89,15 +84,15 @@ if ('zero'    in pp_type): lag_pp_net = Lag_PP_zero(pp_steps, k).to(device)
 if ('perturb' in pp_type): lag_pp_net = Lag_PP_perturb(pp_steps, k).to(device)
 if ('mixed'   in pp_type): lag_pp_net = Lag_PP_mixed(pp_steps, k, rho_per_position).to(device)
 
+# End-to-end model
+rna_ss_e2e = RNA_SS_e2e(contact_net, lag_pp_net)
+
 if LOAD_MODEL and os.path.isfile(model_path):
     print('Loading u net model...')
     contact_net.load_state_dict(torch.load(map_location=device, f=model_path))
 if LOAD_MODEL and os.path.isfile(pp_model_path):
     print('Loading pp model...')
     lag_pp_net.load_state_dict(torch.load(map_location=device, f=pp_model_path))
-
-# End-to-end model
-rna_ss_e2e = RNA_SS_e2e(contact_net, lag_pp_net)
 
 if LOAD_MODEL and os.path.isfile(e2e_model_path):
     print('Loading e2e model...')
@@ -110,6 +105,11 @@ pos_weight = torch.Tensor([300]).to(device)
 criterion_bce_weighted = torch.nn.BCEWithLogitsLoss(pos_weight = pos_weight)
 criterion_mse = torch.nn.MSELoss(reduction='sum')
 
+# per_family_evaluation() is a function only defined in the 'short' stage3 modules.
+# Its purpose is to evaluate the model end-to-end in the same way that all_test_only_e2e() does in the 'long' stgae3 modules,
+# a) in the case of archiveii, the results from rna types which appear in the archiveii but do not appear in rnastralign are removed
+# however this flavor of evluation does two additional things:
+# b) for both cases (archiveii and rnastralign), the results are printed out grouped by the rna type, see table 10 in the appendix D.5
 def per_family_evaluation():
     contact_net.eval()
     lag_pp_net.eval()
@@ -124,8 +124,7 @@ def per_family_evaluation():
 
     batch_n = 0
     for contacts, seq_embeddings, matrix_reps, seq_lens in test_generator:
-        if batch_n %10==0:
-            print('Batch number: ', batch_n)
+        print('Batch number: ', batch_n)
         batch_n += 1
         contacts_batch = torch.Tensor(contacts.float()).to(device)
         seq_embedding_batch = torch.Tensor(seq_embeddings.float()).to(device)
@@ -255,4 +254,4 @@ if not args.test:
             torch.save(rna_ss_e2e.state_dict(), e2e_model_path)
             per_family_evaluation()
 
-all_test_only_e2e(test_generator, contact_net, lag_pp_net, device, test_data, nameof_exper, cond_save_ct_predictions)
+e2efold.evaluation.all_test_only_e2e(test_generator, contact_net, lag_pp_net, device, test_data, nameof_exper, cond_save_ct_predictions)

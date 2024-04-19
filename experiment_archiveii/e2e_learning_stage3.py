@@ -1,4 +1,3 @@
-
 from torch.utils import data
 
 from e2efold.models import ContactNetwork, ContactNetwork_test, ContactNetwork_fc
@@ -7,114 +6,75 @@ from e2efold.models import Lag_PP_NN, RNA_SS_e2e, Lag_PP_zero, Lag_PP_perturb
 from e2efold.models import Lag_PP_mixed, ContactAttention_simple
 from e2efold.common.utils import *
 from e2efold.common.config import process_config
-from e2efold.evaluation import all_test_only_e2e, concat_nameof_output
+from e2efold.evaluation import all_test_only_e2e
 
+# Config Setup:
 args = get_args()
-
 config_file = args.config
-
 config = process_config(config_file)
 print("#####Stage 3#####")
 print('Here is the configuration of this run: ')
 print(pretty_obj(config))
 
-os.environ["CUDA_VISIBLE_DEVICES"]= config.gpu
-
-d = config.u_net_d
-nameof_exper = config.exp_name
-BATCH_SIZE = config.BATCH_SIZE
-OUT_STEP = config.OUT_STEP
-LOAD_MODEL = config.LOAD_MODEL
-pp_steps = config.pp_steps
-pp_loss = config.pp_loss
-data_type = config.data_type
-model_type = config.model_type
-pp_type = '{}_s{}'.format(config.pp_model, pp_steps)
-rho_per_position = config.rho_per_position
-model_path = config.data_root+'models_ckpt/supervised_{}_{}_d{}_l3.pt'.format(model_type, data_type,d)
-pp_model_path = config.data_root+'models_ckpt/lag_pp_{}_{}_{}_position_{}.pt'.format(
-    pp_type, data_type, pp_loss,rho_per_position)
-e2e_model_path = config.data_root+'models_ckpt/e2e_{}_{}_d{}_{}_{}_position_{}.pt'.format(model_type,
-    pp_type,d, data_type, pp_loss,rho_per_position)
-epoches_third = config.epoches_third
-evaluate_epi = config.evaluate_epi
-step_gamma = config.step_gamma
-k = config.k
+d                        = config.u_net_d
+nameof_exper             = config.exp_name
+BATCH_SIZE               = config.BATCH_SIZE
+OUT_STEP                 = config.OUT_STEP
+LOAD_MODEL               = config.LOAD_MODEL
+pp_steps                 = config.pp_steps
+pp_loss                  = config.pp_loss
+data_type                = config.data_type
+model_type               = config.model_type
+pp_type                  = '{}_s{}'.format(config.pp_model, pp_steps)
+rho_per_position         = config.rho_per_position
+model_path               = config.data_root+'models_ckpt/supervised_{}_{}_d{}_l3.pt'.format(model_type, data_type,d)
+pp_model_path            = config.data_root+'models_ckpt/lag_pp_{}_{}_{}_position_{}.pt'.format(pp_type, data_type, pp_loss,rho_per_position)
+e2e_model_path           = config.data_root+'models_ckpt/e2e_{}_{}_d{}_{}_{}_position_{}.pt'.format(model_type,pp_type,d, data_type, pp_loss,rho_per_position)
+epoches_third            = config.epoches_third
+evaluate_epi             = config.evaluate_epi
+step_gamma               = config.step_gamma
+k                        = config.k
 cond_save_ct_predictions = config.save_ct_predictions
 
-
-steps_done = 0
-# if gpu is to be used
+os.environ["CUDA_VISIBLE_DEVICES"] = config.gpu
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-# seed everything for reproduction
 seed_torch(0)
 
-
 # for loading data
-# loading the RNA secondary structure (SS) data, the data has been preprocessed
-# 5s data is just a demo data, which do not have pseudoknot, will generate another data having that
+# TODO: can this class definition be moved to utils so is common?
 from e2efold.data_generator import RNASSDataGenerator, Dataset
 import collections
-RNA_SS_data = collections.namedtuple('RNA_SS_data', 
-    'seq ss_label length name pairs')
+RNA_SS_data = collections.namedtuple('RNA_SS_data', 'seq ss_label length name pairs')
 
 test_data = RNASSDataGenerator(config.data_root+'data/{}/'.format(config.test_data_type), 'all_600')
 
-# Only checked the overlaped data type
-checked_type = ['RNaseP', '5s', 'tmRNA', 'tRNA', 'telomerase', '16s']
-
-
-seq_len = test_data.data_y.shape[-2]
+seq_len = test_data.maxof_seq_len
 print('Max seq length ', seq_len)
 
-# using the pytorch interface to parallel the data generation and model training
-# params = {'batch_size': BATCH_SIZE,
-#           'shuffle': True,
-#           'num_workers': 6,
-#           'drop_last': True}
-# only for save the final results
-params = {'batch_size': 1,
-          'shuffle': False,
-          'num_workers': 6,
-          'drop_last': False}
+params = {'batch_size': 1, 'shuffle': False, 'num_workers': 6, 'drop_last': False}
 test_set = Dataset(test_data)
 test_generator = data.DataLoader(test_set, **params)
 
-# seq_len =500
-
 # store the intermidiate activation
-
 activation = {}
 def get_activation(name):
     def hook(model, input, output):
         activation[name] = output.detach()
     return hook
 
-if model_type =='test_lc':
-    contact_net = ContactNetwork_test(d=d, L=seq_len).to(device)
-if model_type == 'att6':
-    contact_net = ContactAttention(d=d, L=seq_len).to(device)
-if model_type == 'att_simple':
-    contact_net = ContactAttention_simple(d=d, L=seq_len).to(device)    
-if model_type == 'att_simple_fix':
-    contact_net = ContactAttention_simple_fix_PE(d=d, L=seq_len, 
-        device=device).to(device)
-if model_type == 'fc':
-    contact_net = ContactNetwork_fc(d=d, L=seq_len).to(device)
-if model_type == 'conv2d_fc':
-    contact_net = ContactNetwork(d=d, L=seq_len).to(device)
+if (model_type == 'test_lc'):        contact_net = ContactNetwork_test(d=d, L=seq_len).to(device)
+if (model_type == 'att6'):           contact_net = ContactAttention(d=d, L=seq_len).to(device)
+if (model_type == 'att_simple'):     contact_net = ContactAttention_simple(d=d, L=seq_len).to(device)    
+if (model_type == 'att_simple_fix'): contact_net = ContactAttention_simple_fix_PE(d=d, L=seq_len).to(device)
+if (model_type == 'fc'):             contact_net = ContactNetwork_fc(d=d, L=seq_len).to(device)
+if (model_type == 'conv2d_fc'):      contact_net = ContactNetwork(d=d, L=seq_len).to(device)
 
 # contact_net.conv1d2.register_forward_hook(get_activation('conv1d2'))
 
-# need to write the class for the computational graph of lang pp
-if pp_type=='nn':
-    lag_pp_net = Lag_PP_NN(pp_steps, k).to(device)
-if 'zero' in pp_type:
-    lag_pp_net = Lag_PP_zero(pp_steps, k).to(device)
-if 'perturb' in pp_type:
-    lag_pp_net = Lag_PP_perturb(pp_steps, k).to(device)
-if 'mixed'in pp_type:
-    lag_pp_net = Lag_PP_mixed(pp_steps, k, rho_per_position).to(device)
+if ('nn'      in pp_type): lag_pp_net = Lag_PP_NN(pp_steps, k).to(device)
+if ('zero'    in pp_type): lag_pp_net = Lag_PP_zero(pp_steps, k).to(device)
+if ('perturb' in pp_type): lag_pp_net = Lag_PP_perturb(pp_steps, k).to(device)
+if ('mixed'   in pp_type): lag_pp_net = Lag_PP_mixed(pp_steps, k, rho_per_position).to(device)
 
 if LOAD_MODEL and os.path.isfile(model_path):
     print('Loading u net model...')
@@ -147,8 +107,7 @@ def per_family_evaluation():
     countof_seq_per_batch = test_generator.batch_size
     for contacts, seq_embeddings, matrix_reps, seq_lens in test_generator:
         if countof_batches_elapsed == 10: break # TODO: remove
-        if countof_batches_elapsed %1==0:
-            print('Batch number: ', countof_batches_elapsed)
+        print('Batch number: ', countof_batches_elapsed)
         countof_batches_elapsed += 1
         contacts_batch = torch.Tensor(contacts.float()).to(device)
         seq_embedding_batch = torch.Tensor(seq_embeddings.float()).to(device)
@@ -210,20 +169,18 @@ def per_family_evaluation():
     dictof_result_indiv['shift_f1'] = pp_shift_f1
     # result_dict['exact_weighted_f1'] = np.sum(np.array(pp_exact_f1)*np.array(seq_lens_list)/np.sum(seq_lens_list))
     # result_dict['shift_weighted_f1'] = np.sum(np.array(pp_shift_f1)*np.array(seq_lens_list)/np.sum(seq_lens_list))
-    nameof_output_indiv = concat_nameof_output(nameof_exper, 'result_indiv')
+    # nameof_output_indiv = concat_nameof_output(nameof_exper, 'result_indiv')
     # write_dict_csv(dictof_result_indiv, nameof_file=nameof_output_indiv, cond_auto_open=False)
     
     # pdb.set_trace()
     dfof_result_indiv = pd.DataFrame(dictof_result_indiv)
-    final_result = dfof_result_indiv[dfof_result_indiv['type'].isin(
-        ['RNaseP', '5s', 'tmRNA', 'tRNA', 'telomerase', '16s'])]
+    final_result = dfof_result_indiv[dfof_result_indiv['type'].isin(['RNaseP', '5s', 'tmRNA', 'tRNA', 'telomerase', '16s'])]
     to_output = list(map(str, 
         list(final_result[['exact_p', 'exact_r', 'exact_f1', 'shift_p','shift_r', 'shift_f1']].mean().values.round(3))))
     print('Number of sequences: ', len(final_result))
-    write_dict_csv(dfof_result_indiv.to_dict(), nameof_file=nameof_output_indiv, cond_auto_open=False)
+    # write_dict_csv(dfof_result_indiv.to_dict(), nameof_file=nameof_output_indiv, cond_auto_open=False)
     print(to_output)
 
 # per_family_evaluation()
-listof_type_filters = ['RNaseP', '5s', 'tmRNA', 'tRNA', 'telomerase', '16s']
-# listof_type_filters = ['RNaseP', 'tmRNA', 'tRNA', 'telomerase', '16s'] # NOTE: taking out 5s for experiment
-all_test_only_e2e(test_generator, contact_net, lag_pp_net, device, test_data, nameof_exper, cond_save_ct_predictions, listof_type_filters)
+listof_type_filters = ['RNaseP', '5s', 'tmRNA', 'tRNA', 'telomerase', '16s'] #TODO: have to also integrate the per-famliy evaluation output that is used to display Table 10 into the evaluation.py function
+all_test_only_e2e(test_generator, contact_net, lag_pp_net, device, test_data, nameof_exper, cond_save_ct_predictions, listof_type_filters=None) # TODO: change back, for testing of non-filter results
