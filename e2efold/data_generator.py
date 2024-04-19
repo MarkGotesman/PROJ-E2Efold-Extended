@@ -15,34 +15,33 @@ class RNASSDataGenerator(object):
         self.data_dir = data_dir
         self.split = split
         self.upsampling = upsampling
-        # Load vocab explicitly when needed
-        self.load_data()
-        # Reset batch pointer to zero
-        self.batch_pointer = 0
+        self.load_data() # Load vocab explicitly when needed
+        self.batch_pointer = 0 # Reset batch pointer to zero
 
     def load_data(self):
         p = Pool()
         data_dir = self.data_dir
         # Load the current split
-        RNA_SS_data = collections.namedtuple('RNA_SS_data', 
-            'seq ss_label length name pairs')
         with open(os.path.join(data_dir, '%s.pickle' % self.split), 'rb') as f:
             self.data = cPickle.load(f)
+        
         if self.upsampling:
             self.data = self.upsampling_data()
-        self.data_x = np.array([instance[0] for instance in self.data])
-        self.data_y = np.array([instance[1] for instance in self.data])
-        self.pairs = np.array([instance[-1] for instance in self.data])
-        self.seq_length = np.array([instance[2] for instance in self.data])
-        self.len = len(self.data)
+        
+        self.data_x     = np.array([instance[0] for instance in self.data]) # seq
+        self.data_y     = np.array([instance[1] for instance in self.data]) # ss_label
+        self.seq_length = np.array([instance[2] for instance in self.data]) # length
+        self.name       = np.array([instance[3] for instance in self.data]) # name
+        self.pairs      = np.array([instance[4] for instance in self.data]) # pairs
+        
+        self.countof_sequences = len(self.data)
         self.seq = list(p.map(encoding2seq, self.data_x))
-        self.seq_max_len = len(self.data_x[0])
+        self.maxof_seq_len = len(self.data_x[0])
         # self.matrix_rep = np.array(list(p.map(creatmat, self.seq)))
-        # self.matrix_rep = np.zeros([self.len, len(self.data_x[0]), len(self.data_x[0])])
+        # self.matrix_rep = np.zeros([self.countof_sequences, len(self.data_x[0]), len(self.data_x[0])])
 
     def upsampling_data(self):
-        name = [instance.name for instance in self.data]
-        d_type = np.array(list(map(lambda x: x.split('/')[2], name)))
+        d_type = np.array(list(map(lambda x: x.split('/')[2], self.name)))
         data = np.array(self.data)
         max_num = max(Counter(list(d_type)).values())
         data_list = list()
@@ -87,7 +86,7 @@ class RNASSDataGenerator(object):
         yield batch_x, batch_y, batch_seq_len
 
     def pairs2map(self, pairs):
-        seq_len = self.seq_max_len
+        seq_len = self.maxof_seq_len
         contact = np.zeros([seq_len, seq_len])
         for pair in pairs:
             contact[pair[0], pair[1]] = 1
@@ -128,7 +127,7 @@ class RNASSDataGenerator(object):
     def random_sample(self, size=1):
         # random sample one RNA
         # return RNA sequence and the ground truth contact map
-        index = np.random.randint(self.len, size=size)
+        index = np.random.randint(self.countof_sequences, size=size)
         data = list(np.array(self.data)[index])
         data_seq = [instance[0] for instance in data]
         data_stru_prob = [instance[1] for instance in data]
@@ -154,7 +153,7 @@ class Dataset(data.Dataset):
 
   def __len__(self):
         'Denotes the total number of samples'
-        return self.data.len
+        return self.data.countof_sequences
 
   def __getitem__(self, index):
         'Generates one sample of data'
@@ -169,7 +168,7 @@ class Dataset_1800(data.Dataset):
 
   def __len__(self):
         'Denotes the total number of samples'
-        return self.data.len
+        return self.data.countof_sequences
 
   def __getitem__(self, index):
         'Generates one sample of data'
@@ -199,7 +198,7 @@ class Dataset_cdp(data.Dataset):
 
   def __len__(self):
         'Denotes the total number of samples'
-        return self.data.len
+        return self.data.countof_sequences
 
   def __getitem__(self, index):
         'Generates one sample of data'
