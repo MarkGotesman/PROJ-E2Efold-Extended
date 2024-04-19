@@ -53,8 +53,8 @@ val_data = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'va
 # test_data = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'test_no_redundant')
 test_data = RNASSDataGenerator(config.data_root+'data/rnastralign_all/', 'test_no_redundant_600')
 
-seq_len = train_data.maxof_seq_len
-print('Max seq length ', seq_len)
+train_maxof_seq_len = train_data.maxof_seq_len
+print('Max seq length ', train_maxof_seq_len)
 
 
 # using the pytorch interface to parallel the data generation and model training
@@ -81,19 +81,12 @@ def get_activation(name):
         activation[name] = output.detach()
     return hook
 
-if model_type =='test_lc':
-    contact_net = ContactNetwork_test(d=d, L=seq_len).to(device)
-if model_type == 'att6':
-    contact_net = ContactAttention(d=d, L=seq_len).to(device)
-if model_type == 'att_simple':
-    contact_net = ContactAttention_simple(d=d, L=seq_len).to(device)    
-if model_type == 'att_simple_fix':
-    contact_net = ContactAttention_simple_fix_PE(d=d, L=seq_len, 
-        device=device).to(device)
-if model_type == 'fc':
-    contact_net = ContactNetwork_fc(d=d, L=seq_len).to(device)
-if model_type == 'conv2d_fc':
-    contact_net = ContactNetwork(d=d, L=seq_len).to(device)
+if (model_type == 'test_lc'):        contact_net = ContactNetwork_test           (d=d, L=train_maxof_seq_len).to(device)
+if (model_type == 'att6'):           contact_net = ContactAttention              (d=d, L=train_maxof_seq_len).to(device)
+if (model_type == 'att_simple'):     contact_net = ContactAttention_simple       (d=d, L=train_maxof_seq_len).to(device)    
+if (model_type == 'att_simple_fix'): contact_net = ContactAttention_simple_fix_PE(d=d, L=train_maxof_seq_len).to(device)
+if (model_type == 'fc'):             contact_net = ContactNetwork_fc             (d=d, L=train_maxof_seq_len).to(device)
+if (model_type == 'conv2d_fc'):      contact_net = ContactNetwork                (d=d, L=train_maxof_seq_len).to(device)
 
 # contact_net.conv1d2.register_forward_hook(get_activation('conv1d2'))
 
@@ -123,8 +116,8 @@ def model_eval():
 
     # padding the states for supervised training with all 0s
     state_pad = torch.zeros([matrix_reps_batch.shape[0], 
-        seq_len, seq_len]).to(device)
-    PE_batch = get_pe(seq_lens, seq_len).float().to(device)
+        train_maxof_seq_len, train_maxof_seq_len]).to(device)
+    PE_batch = get_pe(seq_lens, train_maxof_seq_len).float().to(device)
 
     with torch.no_grad():
         pred_contacts = contact_net(PE_batch, 
@@ -152,9 +145,9 @@ def model_eval_all_test():
             torch.Tensor(matrix_reps.float()).to(device), -1)
 
         state_pad = torch.zeros([matrix_reps_batch.shape[0], 
-            seq_len, seq_len]).to(device)
+            train_maxof_seq_len, train_maxof_seq_len]).to(device)
 
-        PE_batch = get_pe(seq_lens, seq_len).float().to(device)
+        PE_batch = get_pe(seq_lens, train_maxof_seq_len).float().to(device)
         with torch.no_grad():
             pred_contacts = contact_net(PE_batch, 
                 seq_embedding_batch, state_pad)
@@ -218,9 +211,9 @@ def model_eval_all_test_greedy_sort():
             torch.Tensor(matrix_reps.float()).to(device), -1)
 
         state_pad = torch.zeros([matrix_reps_batch.shape[0], 
-            seq_len, seq_len]).to(device)
+            train_maxof_seq_len, train_maxof_seq_len]).to(device)
 
-        PE_batch = get_pe(seq_lens, seq_len).float().to(device)
+        PE_batch = get_pe(seq_lens, train_maxof_seq_len).float().to(device)
         with torch.no_grad():
             pred_contacts = contact_net(PE_batch, 
                 seq_embedding_batch, state_pad)
@@ -274,9 +267,9 @@ def model_eval_all_test_greedy_sampling():
             torch.Tensor(matrix_reps.float()).to(device), -1)
 
         state_pad = torch.zeros([matrix_reps_batch.shape[0], 
-            seq_len, seq_len]).to(device)
+            train_maxof_seq_len, train_maxof_seq_len]).to(device)
 
-        PE_batch = get_pe(seq_lens, seq_len).float().to(device)
+        PE_batch = get_pe(seq_lens, train_maxof_seq_len).float().to(device)
         with torch.no_grad():
             pred_contacts = contact_net(PE_batch, 
                 seq_embedding_batch, state_pad)
@@ -333,11 +326,11 @@ for epoch in range(epoches_first):
 
         # padding the states for supervised training with all 0s
         state_pad = torch.zeros([matrix_reps_batch.shape[0], 
-            seq_len, seq_len]).to(device)
+            train_maxof_seq_len, train_maxof_seq_len]).to(device)
 
 
-        PE_batch = get_pe(seq_lens, seq_len).float().to(device)
-        contact_masks = torch.Tensor(contact_map_masks(seq_lens, seq_len)).to(device)
+        PE_batch = get_pe(seq_lens, train_maxof_seq_len).float().to(device)
+        contact_masks = torch.Tensor(contact_map_masks(seq_lens, train_maxof_seq_len)).to(device)
         pred_contacts = contact_net(PE_batch, 
             seq_embedding_batch, state_pad)
 

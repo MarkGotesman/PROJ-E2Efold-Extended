@@ -46,31 +46,20 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 # seed everything for reproduction
 seed_torch(0)
 
-seq_len = 600
+train_maxof_seq_len = 600
 
-if model_type =='test_lc':
-    contact_net = ContactNetwork_test(d=d, L=seq_len).to(device)
-if model_type == 'att6':
-    contact_net = ContactAttention(d=d, L=seq_len).to(device)
-if model_type == 'att_simple':
-    contact_net = ContactAttention_simple(d=d, L=seq_len).to(device)    
-if model_type == 'att_simple_fix':
-    contact_net = ContactAttention_simple_fix_PE(d=d, L=seq_len, 
-        device=device).to(device)
-if model_type == 'fc':
-    contact_net = ContactNetwork_fc(d=d, L=seq_len).to(device)
-if model_type == 'conv2d_fc':
-    contact_net = ContactNetwork(d=d, L=seq_len).to(device)
+if (model_type == 'test_lc'):        contact_net = ContactNetwork_test           (d=d, L=train_maxof_seq_len).to(device)
+if (model_type == 'att6'):           contact_net = ContactAttention              (d=d, L=train_maxof_seq_len).to(device)
+if (model_type == 'att_simple'):     contact_net = ContactAttention_simple       (d=d, L=train_maxof_seq_len).to(device)    
+if (model_type == 'att_simple_fix'): contact_net = ContactAttention_simple_fix_PE(d=d, L=train_maxof_seq_len).to(device)
+if (model_type == 'fc'):             contact_net = ContactNetwork_fc             (d=d, L=train_maxof_seq_len).to(device)
+if (model_type == 'conv2d_fc'):      contact_net = ContactNetwork                (d=d, L=train_maxof_seq_len).to(device)
 
 # need to write the class for the computational graph of lang pp
-if pp_type=='nn':
-    lag_pp_net = Lag_PP_NN(pp_steps, k).to(device)
-if 'zero' in pp_type:
-    lag_pp_net = Lag_PP_zero(pp_steps, k).to(device)
-if 'perturb' in pp_type:
-    lag_pp_net = Lag_PP_perturb(pp_steps, k).to(device)
-if 'mixed'in pp_type:
-    lag_pp_net = Lag_PP_mixed(pp_steps, k, rho_per_position).to(device)
+if ('nn'      in pp_type): lag_pp_net = Lag_PP_NN     (pp_steps, k).to(device)
+if ('zero'    in pp_type): lag_pp_net = Lag_PP_zero   (pp_steps, k).to(device)
+if ('perturb' in pp_type): lag_pp_net = Lag_PP_perturb(pp_steps, k).to(device)
+if ('mixed'   in pp_type): lag_pp_net = Lag_PP_mixed  (pp_steps, k, rho_per_position).to(device)
 
 rna_ss_e2e = RNA_SS_e2e(contact_net, lag_pp_net)
 
@@ -96,7 +85,7 @@ for file_name in files:
     sequences.append(load_seq(os.path.join(folder,file_name)))
 
 querys = list(zip(files, sequences))
-querys = list(filter(lambda x: len(x[1])<=seq_len, querys))
+querys = list(filter(lambda x: len(x[1])<=train_maxof_seq_len, querys))
 
 # make the predictions
 
@@ -113,7 +102,7 @@ ct_list = list()
 
 for seqs in seq_batch:
     seq_embeddings =  list(map(seq_encoding, seqs))
-    seq_embeddings = list(map(lambda x: padding(x, seq_len), 
+    seq_embeddings = list(map(lambda x: padding(x, train_maxof_seq_len), 
         seq_embeddings))
     seq_embeddings = np.array(seq_embeddings)
     seq_lens = torch.Tensor(np.array(list(map(len, seqs)))).int()
@@ -122,7 +111,7 @@ for seqs in seq_batch:
 
     state_pad = torch.zeros(1,2,2).to(device)
 
-    PE_batch = get_pe(seq_lens, seq_len).float().to(device)
+    PE_batch = get_pe(seq_lens, train_maxof_seq_len).float().to(device)
     with torch.no_grad():
         pred_contacts = contact_net(PE_batch, 
             seq_embedding_batch, state_pad)

@@ -65,8 +65,8 @@ if data_type == 'rnastralign_all':
     test_data_1800 = RNASSDataGenerator(config.data_root+'data/{}/'.format(data_type), 'test_no_redundant_1800')
 
 
-seq_len = train_data.maxof_seq_len
-print('Max seq length ', seq_len)
+train_maxof_seq_len = train_data.maxof_seq_len
+print('Max seq length ', train_maxof_seq_len)
 
 
 # using the pytorch interface to parallel the data generation and model training
@@ -105,19 +105,12 @@ test_set_1800 = Dataset_1800(test_data_1800)
 test_generator_1800 = data.DataLoader(test_set_1800, **params)
 
 
-if model_type =='test_lc':
-    contact_net = ContactNetwork_test(d=d, L=seq_len).to(device)
-if model_type == 'att6':
-    contact_net = ContactAttention(d=d, L=seq_len).to(device)
-if model_type == 'att_simple':
-    contact_net = ContactAttention_simple(d=d, L=seq_len).to(device)    
-if model_type == 'att_simple_fix':
-    contact_net = ContactAttention_simple_fix_PE(d=d, L=seq_len, 
-        device=device).to(device)
-if model_type == 'fc':
-    contact_net = ContactNetwork_fc(d=d, L=seq_len).to(device)
-if model_type == 'conv2d_fc':
-    contact_net = ContactNetwork(d=d, L=seq_len).to(device)
+if (model_type == 'test_lc'):        contact_net = ContactNetwork_test           (d=d, L=train_maxof_seq_len).to(device)
+if (model_type == 'att6'):           contact_net = ContactAttention              (d=d, L=train_maxof_seq_len).to(device)
+if (model_type == 'att_simple'):     contact_net = ContactAttention_simple       (d=d, L=train_maxof_seq_len).to(device)    
+if (model_type == 'att_simple_fix'): contact_net = ContactAttention_simple_fix_PE(d=d, L=train_maxof_seq_len).to(device)
+if (model_type == 'fc'):             contact_net = ContactNetwork_fc             (d=d, L=train_maxof_seq_len).to(device)
+if (model_type == 'conv2d_fc'):      contact_net = ContactNetwork                (d=d, L=train_maxof_seq_len).to(device)
 
 
 if LOAD_MODEL and os.path.isfile(model_path):
