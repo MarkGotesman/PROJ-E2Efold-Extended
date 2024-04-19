@@ -231,7 +231,7 @@ class ContactAttention_simple(nn.Module):
 
 class ContactAttention_simple_fix_PE(ContactAttention_simple):
     """docstring for ContactAttention_simple_fix_PE"""
-    def __init__(self, d, L, device):
+    def __init__(self, d, L):
         super(ContactAttention_simple_fix_PE, self).__init__(d, L)
         self.PE_net = nn.Sequential(
             nn.Linear(111,5*d),
@@ -247,11 +247,18 @@ class ContactAttention_simple_fix_PE(ContactAttention_simple):
         seq: L*4
         state: L*L
         """
+        # print(f'self.d = {self.d}')
+        # print(f'self.L = {self.L}')
+        # print(f'pe.shape = {pe.shape}')
         position_embeds = self.PE_net(pe.view(-1, 111)).view(-1, self.L, self.d) # N*L*111 -> N*L*d
+        # print(f'position_embeds1.shape = {position_embeds.shape}')
         position_embeds = position_embeds.permute(0, 2, 1) # N*d*L
+        # print(f'position_embeds2.shape = {position_embeds.shape}')
+        # print(f'seq.shape1 = {seq.shape}')
         seq = seq.permute(0, 2, 1) # 4*L
+        # print(f'seq.shape2 = {seq.shape}')
         seq = F.relu(self.bn1(self.conv1d1(seq))) #d*L just for increase the capacity
-
+        # print(f'seq.shape3 = {seq.shape}')
         seq = torch.cat([seq, position_embeds], 1) # 2d*L
         seq = self.transformer_encoder(seq.permute(-1, 0, 1))
         seq = seq.permute(1, 2, 0)
