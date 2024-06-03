@@ -1,5 +1,5 @@
 # ML & RNA Folding: Extending the E2Efold Model
-[[Paper](https://repository.yu.edu/items/43df18de-c5d3-42a7-b31d-c714d4c14d9d)] [[Video Overview](PLACEHOLDER)] [[Mentor (Dr. Youshan Zhang)](https://scholar.google.com/citations?user=47ItLM8AAAAJ)]
+[[Paper](https://repository.yu.edu/items/43df18de-c5d3-42a7-b31d-c714d4c14d9d)] [[Video Overview](PLACEHOLDER)] [[Mentor (Dr. Y. Zhang)](https://scholar.google.com/citations?user=47ItLM8AAAAJ)]
 ___
 (_Original README_)
 # E2Efold: RNA Secondary Structure Prediction By Learning Unrolled Algorithms
